@@ -1,1 +1,7 @@
 node_modules
+
+#生效网址：https://blog.csdn.net/xiaoyuan511/article/details/50823176
+#生效命令：git rm -r --cached .           git add .            git commit -m 'update .gitignore'
+*.iml
+.idea/
+package-lock.json

@@ -1,4 +1,5 @@
-var Config, HTTPError, Session, Utility, app, authentication, bodyParser, cacheControl, compression, cookieParser, cors, env, errorHandler, express, friendshipRouter, groupRouter, miscRouter, parameterPreprocessor, server, userRouter;
+var Config, HTTPError, Session, Utility, app, authentication, bodyParser, cacheControl, compression, cookieParser, cors,
+    env, errorHandler, express, friendshipRouter, groupRouter, miscRouter, parameterPreprocessor, server, userRouter;
 
 express = require('express');
 
@@ -27,15 +28,17 @@ groupRouter = require('./routes/group');
 miscRouter = require('./routes/misc');
 
 if ((env = process.env.NODE_ENV) !== 'development' && env !== 'production') {
-  console.log("Error: NODE_ENV must be set to 'development' or 'production'.");
-  return process.exit();
+    console.log("Error: NODE_ENV must be set to 'development' or 'production'.");
+    return process.exit();
 }
+
+console.log('index.js start');
 
 app = express();
 
 app.use(cors({
-  origin: Config.CORS_HOSTS,
-  credentials: true
+    origin: Config.CORS_HOSTS,
+    credentials: true
 }));
 
 app.use(compression());
@@ -44,55 +47,59 @@ app.use(cookieParser());
 
 app.use(bodyParser.json());
 
-authentication = function(req, res, next) {
-  var body, currentUserId, i, len, ref, reqPath, userAgent;
-  userAgent = req.get('user-agent').substr(0, 50);
-  ref = ['/misc/demo_square', '/misc/latest_update', '/misc/client_version', '/user/login', '/user/register', '/user/reset_password', '/user/send_code', '/user/verify_code', '/user/get_sms_img_code', '/user/check_username_available', '/user/check_phone_available'];
-  for (i = 0, len = ref.length; i < len; i++) {
-    reqPath = ref[i];
-    if (req.path === reqPath) {
-      if (req.body.password) {
-        body = JSON.stringify(req.body).replace(/"password":".*?"/, '"password":"**********"');
-      } else {
-        body = JSON.stringify(req.body);
-      }
-      Utility.logPath('%s %s %s %s', userAgent, req.method, req.originalUrl, body);
-      return next();
+authentication = function (req, res, next) {
+    var body, currentUserId, i, len, ref, reqPath, userAgent;
+    userAgent = req.get('user-agent').substr(0, 50);
+    //访问下面这些网址，会调用next()，下一个中间件？
+    ref = ['/misc/demo_square', '/misc/latest_update', '/misc/client_version', '/user/login', '/user/register', '/user/reset_password', '/user/send_code', '/user/verify_code', '/user/get_sms_img_code', '/user/check_username_available', '/user/check_phone_available'];
+    for (i = 0, len = ref.length; i < len; i++) {
+        reqPath = ref[i];
+        if (req.path === reqPath) {
+            if (req.body.password) {
+                body = JSON.stringify(req.body).replace(/"password":".*?"/, '"password":"**********"');
+            } else {
+                body = JSON.stringify(req.body);
+            }
+            Utility.logPath('%s %s %s %s', userAgent, req.method, req.originalUrl, body);
+            return next();
+        }
     }
-  }
-  currentUserId = Session.getCurrentUserId(req);
-  if (!currentUserId) {
-    return res.status(403).send('Not loged in.');
-  }
-  Utility.logPath('%s User(%s/%s) %s %s %s', userAgent, Utility.encodeId(currentUserId), currentUserId, req.method, req.originalUrl, JSON.stringify(req.body));
-  return next();
+    //如果访问非上面列出来的网址，则需要判断是否已经登录
+    currentUserId = Session.getCurrentUserId(req);
+    if (!currentUserId) {
+        return res.status(403).send('Not loged in.');
+    }
+    Utility.logPath('%s User(%s/%s) %s %s %s', userAgent, Utility.encodeId(currentUserId), currentUserId, req.method, req.originalUrl, JSON.stringify(req.body));
+    return next();
 };
 
-cacheControl = function(req, res, next) {
-  res.set('Cache-Control', 'private');
-  return next();
+cacheControl = function (req, res, next) {
+    res.set('Cache-Control', 'private');
+    return next();
 };
 
-parameterPreprocessor = function(req, res, next) {
-  var prop;
-  for (prop in req.body) {
-    if (prop.endsWith('Id') || prop.endsWith('Ids')) {
-      req.body['encoded' + prop[0].toUpperCase() + prop.substr(1)] = req.body[prop];
-      req.body[prop] = Utility.decodeIds(req.body[prop]);
+parameterPreprocessor = function (req, res, next) {
+    var prop;
+    //prop其实就是body中的key
+    for (prop in req.body) {
+        if (prop.endsWith('Id') || prop.endsWith('Ids')) {
+            req.body['encoded' + prop[0].toUpperCase() + prop.substr(1)] = req.body[prop];
+            req.body[prop] = Utility.decodeIds(req.body[prop]);
+        }
+        //req.body[prop]是body中的key prop对应的值，下面的意思就是除了几个key以外，其他key对应的值不能为空
+        if (Utility.isEmpty(req.body[prop]) && prop !== 'displayName' && prop !== 'pushContent' && prop !== 'bulletin') {
+            return res.status(400).send("Empty " + prop + ".");
+        }
     }
-    if (Utility.isEmpty(req.body[prop]) && prop !== 'displayName' && prop !== 'pushContent' && prop !== 'bulletin') {
-      return res.status(400).send("Empty " + prop + ".");
-    }
-  }
-  return next();
+    return next();
 };
 
-errorHandler = function(err, req, res, next) {
-  if (err instanceof HTTPError) {
-    return res.status(err.statusCode).send(err.message);
-  }
-  Utility.logError(err);
-  return res.status(500).send(err.message || 'Unknown error.');
+errorHandler = function (err, req, res, next) {
+    if (err instanceof HTTPError) {
+        return res.status(err.statusCode).send(err.message);
+    }
+    Utility.logError(err);
+    return res.status(500).send(err.message || 'Unknown error.');
 };
 
 app.all('*', authentication);
@@ -111,12 +118,12 @@ app.use('/misc', miscRouter);
 
 app.use(errorHandler);
 
-server = app.listen(Config.SERVER_PORT, function() {
-  var map = {
-    development: '开发环境',
-    production: '生产环境'
-  };
-  return console.log('%s服务已启动，地址: http://%s:%s', map[app.get('env')], server.address().address, server.address().port);
+server = app.listen(Config.SERVER_PORT, function () {
+    var map = {
+        development: '开发环境',
+        production: '生产环境'
+    };
+    return console.log('%s服务已启动，地址: http://%s:%s', map[app.get('env')], server.address().address, server.address().port);
 });
 
 module.exports = app;

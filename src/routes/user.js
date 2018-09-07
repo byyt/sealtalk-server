@@ -243,8 +243,11 @@ router.post('/login', function(req, res, next) {
   phone = req.body.phone;
   password = req.body.password;
   if (!validator.isMobilePhone(phone, regionMap[region])) {
-    return res.status(400).send('Invalid region and phone number.');
+    // return res.status(400).send('Invalid region and phone number.');
+    // 结合客户端可以看到返回1000，客户端会显示手机或者密码错误，而不会显示服务器返回的信息
+    return res.send(new APIResult(1000, null, 'Invalid region and phone number.'));
   }
+  //下面就是数据库操作
   return User.findOne({
     where: {
       region: region,

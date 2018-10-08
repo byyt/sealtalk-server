@@ -185,6 +185,62 @@ router.post('/check_phone_available', function (req, res, next) {
     })["catch"](next);
 });
 
+//完善个人资料，验证码登录通过后，如果未注册的，则完善个人资料后注册
+router.post('/register_code', function (req, res, next) {
+    var nickname, password, verificationToken;
+    nickname = Utility.xss(req.body.nickname, NICKNAME_MAX_LENGTH);
+    password = req.body.password;
+    verificationToken = req.body.verification_token;
+    if (password.indexOf(' ') > 0) {
+        return res.status(400).send('Password must have no space.');
+    }
+    if (!validator.isLength(nickname, NICKNAME_MIN_LENGTH, NICKNAME_MAX_LENGTH)) {
+        return res.status(400).send('Length of nickname invalid.');
+    }
+    if (!validator.isLength(password, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH)) {
+        return res.status(400).send('Length of password invalid.');
+    }
+    if (!validator.isUUID(verificationToken)) {
+        return res.status(400).send('Invalid verification_token.');
+    }
+    return VerificationCode.getByToken(verificationToken).then(function (verification) {
+        if (!verification) {
+            return res.status(404).send('Unknown verification_token.');
+        }
+        return User.checkPhoneAvailable(verification.region, verification.phone).then(function (result) {
+            var hash, salt;
+            if (result) {
+                salt = Utility.random(1000, 9999);
+                hash = Utility.hash(password, salt);
+                return sequelize.transaction(function (t) {
+                    return User.create({
+                        nickname: nickname,
+                        region: verification.region,
+                        phone: verification.phone,
+                        passwordHash: hash,
+                        passwordSalt: salt.toString()
+                    }, {
+                        transaction: t
+                    }).then(function (user) {
+                        return DataVersion.create({
+                            userId: user.id,
+                            transaction: t
+                        }).then(function () {
+                            Session.setAuthCookie(res, user.id);
+                            Session.setNicknameToCache(user.id, nickname);
+                            return res.send(new APIResult(200, Utility.encodeResults({
+                                id: user.id
+                            })));
+                        });
+                    });
+                });
+            } else {
+                return res.status(400).send('Phone number has already existed.');
+            }
+        });
+    })["catch"](next);
+});
+
 router.post('/register', function (req, res, next) {
     var nickname, password, verificationToken;
     nickname = Utility.xss(req.body.nickname, NICKNAME_MAX_LENGTH);

@@ -191,18 +191,27 @@ router.post('/register_code', function (req, res, next) {
     nickname = Utility.xss(req.body.nickname, NICKNAME_MAX_LENGTH);
     password = req.body.password;
     verificationToken = req.body.verification_token;
+    console.log("register");
+    console.log(nickname);
+    console.log(password);
+    console.log(verificationToken);
     if (password.indexOf(' ') > 0) {
+        console.log("Password must have no space.");
         return res.status(400).send('Password must have no space.');
     }
     if (!validator.isLength(nickname, NICKNAME_MIN_LENGTH, NICKNAME_MAX_LENGTH)) {
+        console.log("Length of nickname invalid.");
         return res.status(400).send('Length of nickname invalid.');
     }
     if (!validator.isLength(password, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH)) {
+        console.log("Length of nickname invalid.");
         return res.status(400).send('Length of password invalid.');
     }
     if (!validator.isUUID(verificationToken)) {
+        console.log("Invalid verification_token.");
         return res.status(400).send('Invalid verification_token.');
     }
+    console.log("VerificationCode.getByToken");
     return VerificationCode.getByToken(verificationToken).then(function (verification) {
         if (!verification) {
             return res.status(404).send('Unknown verification_token.');
@@ -305,7 +314,6 @@ router.post('/code_login', function (req, res, next) {
     if (!validator.isUUID(verificationToken)) {
         return res.status(400).send('Invalid verification_token.');
     }
-    console.log("code_login2");
     return VerificationCode.getByToken(verificationToken).then(function (verification) {
         if (!verification) {
             console.log("yan zheng ma cuo wu");

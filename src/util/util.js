@@ -86,6 +86,29 @@ Utility = (function() {
     return Utility.numberToString(str);
   };
 
+  //results是数据库查询后得到的结果集或定义的json，数据库查询后的结果集不是json格式，需要转换成json
+  // keys是，希望对其中的某些字段进行加密，结合n3d将数字加密成字符串
+  //如果调用Utility.encodeResults(users)，即不传keys，则默认会加密users中的id字段
+  //如果调用Utility.encodeResults({
+    //                 userId: user.id,
+    //                 token: token
+    //             }, 'userId'))，则会加密该json中的userId字段
+  //如果调用Utility.encodeResults(groups, [['group', 'id'], ['group', 'creatorId']]);
+  //或者Utility.encodeResults(dbBlacklist, [['user', 'id']]);
+  //说明json中是有嵌套json的存在，比如下面，这种情况就是加密user字段中的json中的id字段
+  //   {
+  //       "displayName": "",
+  //       "message": "",
+  //       "status": 20,
+  //       "updatedAt": "2018-09-12T07:05:05.000Z",
+  //       "user": {
+  //           "id": "EOn9cw6D",
+  //           "nickname": "b1",
+  //           "region": "86",
+  //           "phone": "15210505061",
+  //           "portraitUri": ""
+  //        }
+  //   }
   Utility.encodeResults = function(results, keys) {
     var isSubArrayKey, replaceKeys, retVal;
     replaceKeys = function(obj) {

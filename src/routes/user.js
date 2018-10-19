@@ -204,7 +204,7 @@ router.post('/register_code', function (req, res, next) {
         return res.status(400).send('Length of nickname invalid.');
     }
     if (!validator.isLength(password, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH)) {
-        console.log("Length of nickname invalid.");
+        console.log("Length of password invalid.");
         return res.status(400).send('Length of password invalid.');
     }
     if (!validator.isUUID(verificationToken)) {
@@ -407,9 +407,7 @@ router.post('/login', function (req, res, next) {
     console.log(phone);
     console.log(password);
     if (!validator.isMobilePhone(phone, regionMap[region])) {
-        // return res.status(400).send('Invalid region and phone number.');
-        // 结合客户端可以看到返回1000，客户端会显示手机或者密码错误，而不会显示服务器返回的信息
-        return res.send(new APIResult(1000, null, 'Invalid region and phone number.'));
+        return res.status(400).send('Invalid region and phone number.');
     }
     //下面就是数据库操作
     return User.findOne({
@@ -479,6 +477,18 @@ router.post('/login', function (req, res, next) {
             }
         }
     })["catch"](next);
+});
+
+//首页获取推荐用户信息列表
+router.get('/get_recommend_users', function (req, res, next) {
+    return User.findAll({
+        where: {},
+        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri']
+    }).then(function (users) {
+        var results;
+        results = Utility.encodeResults(users);
+        return res.send(new APIResult(200, results));
+    });
 });
 
 router.post('/logout', function (req, res) {
@@ -1050,6 +1060,7 @@ router.get('/batch', function (req, res, next) {
 });
 
 //router.param([name], callback)，router对象的param方法用于路径参数的处理
+//这个接口是同步个人信息，对应客户端登录时的SYNC_USER_INFO请求
 router.get('/:id', function (req, res, next) {
     var userId;
     userId = req.params.id;

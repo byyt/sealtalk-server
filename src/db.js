@@ -236,6 +236,7 @@ verificationCodeClassMethods = {
   }
 };
 
+//用户数据表的创建，注意这个只在第一次运行即可，后边数据表结构的修改，直接在mysql编辑工具navicat中进行
 User = sequelize.define('users', {
   id: {
     type: Sequelize.INTEGER.UNSIGNED,

@@ -1,4 +1,4 @@
-var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMember, GroupSync, LoginLog,
+var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMember, GroupSync, LoginLog, PayImgList,
     MAX_GROUP_MEMBER_COUNT, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH,
     PORTRAIT_URI_MAX_LENGTH, PORTRAIT_URI_MIN_LENGTH, Session, User, Utility, VerificationCode, _, co, express,
     getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator;
@@ -25,7 +25,9 @@ Utility = require('../util/util').Utility;
 
 APIResult = require('../util/util').APIResult;
 
-ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4], GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9];
+ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
+    GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
+    PayImgList = ref[10];
 
 MAX_GROUP_MEMBER_COUNT = 500;
 
@@ -486,9 +488,23 @@ router.get('/get_recommend_users', function (req, res, next) {
         attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri']
     }).then(function (users) {
         var results;
+        //如果不填keys，encodeResult函数默认会对id加sequelize.sync()密
         results = Utility.encodeResults(users);
+        //打乱顺序，测试用，客户端每次刷新数据，得到结果不一样
+        results = results.sort(function () {
+            return 0.5 - Math.random()
+        });
         return res.send(new APIResult(200, results));
-    });
+    })["catch"](next);//后面这个["catch"](next);不要忘记加
+});
+
+//详情页获取付费图片列表中哪些图片是该用户已经付费的，如果未付费，则客户端模糊展示
+router.get('/get_imgpay_info', function (req, res, next) {
+    console.log("get_imgpay_info");
+
+    return res.send(new APIResult(200, Utility.encodeResults({
+        token: 'fake token'
+    })));
 });
 
 router.post('/logout', function (req, res) {
@@ -1061,6 +1077,7 @@ router.get('/batch', function (req, res, next) {
 
 //router.param([name], callback)，router对象的param方法用于路径参数的处理
 //这个接口是同步个人信息，对应客户端登录时的SYNC_USER_INFO请求
+//注意，新加的user/xxx请求一定要放在这个请求之前，否则会默认匹配到这个请求，然后返回错误信息
 router.get('/:id', function (req, res, next) {
     var userId;
     userId = req.params.id;

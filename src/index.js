@@ -1,5 +1,5 @@
 var Config, HTTPError, Session, Utility, app, authentication, bodyParser, cacheControl, compression, cookieParser, cors,
-    env, errorHandler, express, friendshipRouter, groupRouter, miscRouter, parameterPreprocessor, server, userRouter;
+    env, errorHandler, express, friendshipRouter, groupRouter, miscRouter, parameterPreprocessor, server, userRouter, payImgListRouter;
 
 express = require('express');
 
@@ -26,6 +26,8 @@ friendshipRouter = require('./routes/friendship');
 groupRouter = require('./routes/group');
 
 miscRouter = require('./routes/misc');
+
+payImgListRouter = require('./routes/payimglist'); //新加的，付费图片的数据表
 
 if ((env = process.env.NODE_ENV) !== 'development' && env !== 'production') {
     console.log("Error: NODE_ENV must be set to 'development' or 'production'.");
@@ -115,6 +117,8 @@ app.use('/friendship', friendshipRouter);
 app.use('/group', groupRouter);
 
 app.use('/misc', miscRouter);
+
+app.use('/payimglist', payImgListRouter);
 
 app.use(errorHandler);
 

@@ -216,6 +216,7 @@ router.post('/register_code', function (req, res, next) {
     console.log("VerificationCode.getByToken");
     return VerificationCode.getByToken(verificationToken).then(function (verification) {
         if (!verification) {
+            console.log("Unknown verification_token.");
             return res.status(404).send('Unknown verification_token.');
         }
         return User.checkPhoneAvailable(verification.region, verification.phone).then(function (result) {
@@ -485,7 +486,7 @@ router.post('/login', function (req, res, next) {
 router.get('/get_recommend_users', function (req, res, next) {
     return User.findAll({
         where: {},
-        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri']
+        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'freeImgList']
     }).then(function (users) {
         var results;
         //如果不填keys，encodeResult函数默认会对id加sequelize.sync()密
@@ -496,6 +497,56 @@ router.get('/get_recommend_users', function (req, res, next) {
         });
         return res.send(new APIResult(200, results));
     })["catch"](next);//后面这个["catch"](next);不要忘记加
+});
+
+//首页获取推荐用户信息列表
+router.get('/get_user_detail', function (req, res, next) {
+    var userId;
+    userId = req.query.id;
+    userId = Utility.decodeIds(userId); //先对userId解码，传过来的是一个字符串
+    // return Cache.get("user_" + userId).then(function (user) { //先尝试从缓存中取
+    //     if (user) {
+    //         return res.send(new APIResult(200, user));
+    //     } else {
+    //         return User.findById(userId, {
+    //             attributes: ['id', 'phone', 'nickname', 'portraitUri', 'freeImgList']
+    //         }).then(function (user) {
+    //             var results;
+    //             if (!user) {
+    //                 return res.status(404).send('Unknown user.');
+    //             }
+    //             results = Utility.encodeResults(user);//如果不填keys，encodeResult函数默认会对id加密
+    //             Cache.set("user_" + userId, results); //读完后存入缓存
+    //             return res.send(new APIResult(200, results));
+    //         });
+    //     }
+    // })["catch"](next);
+
+    //下面是先不用缓存的，以便修改数据库数据时能及时返回给客户端，上线时加上缓存
+    return User.findById(userId, {
+        attributes: ['id', 'phone', 'nickname', 'portraitUri', 'freeImgList']
+    }).then(function (user) {
+        var results;
+        if (!user) {
+            return res.status(404).send('Unknown user.');
+        }
+        results = Utility.encodeResults(user);//如果不填keys，encodeResult函数默认会对id加密
+        console.log(results);
+        var payImgs;
+        PayImgList.findAll({
+            where: {
+                ownerId: userId
+            },
+            attributes: ['imgUrl']
+        }).then(function (payImgs) {
+            console.log(payImgs);
+            var payImgsResult = Utility.encodeResults(payImgs);
+            results.payImgList = payImgsResult;
+        });
+        console.log(results);
+        return res.send(new APIResult(200, results));
+    })["catch"](next);
+
 });
 
 //详情页获取付费图片列表中哪些图片是该用户已经付费的，如果未付费，则客户端模糊展示

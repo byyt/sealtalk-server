@@ -2,7 +2,7 @@ var Blacklist, Config, DataVersion, Friendship, GROUP_CREATOR, GROUP_MEMBER, Gro
     LoginLog, Sequelize, User, Utility, VerificationCode, _, co, dataVersionClassMethods, friendshipClassMethods,
     groupClassMethods,
     groupMemberClassMethods, sequelize, userClassMethods, verificationCodeClassMethods,
-    PayImgList;
+    PayImgList, PayImgAndUserList, payImgListClassMethods, payImgAndUserListClassMethods;
 
 Sequelize = require('sequelize');
 
@@ -73,6 +73,37 @@ userClassMethods = {
             }
         }).then(function (count) {
             return count === 0;
+        });
+    }
+};
+
+payImgListClassMethods = {
+    getPayImgUrlById: function (imgId) {
+        return PayImgList.findOne({
+            where: {
+                id: imgId
+            },
+            attributes: ['id', 'ownerId', 'imgUrl']
+        });
+    },
+    getPayImgUrlsByUserId: function (userId) {
+        return PayImgList.findAll({
+            where: {
+                ownerId: userId
+            },
+            attributes: ['id', 'ownerId', 'imgUrl']
+        });
+    }
+};
+
+payImgAndUserListClassMethods = {
+    getPayImgUrlById: function (userId, friendId) {
+        return Friendship.findOne({
+            where: {
+                userId: userId,
+                friendId: friendId
+            },
+            attributes: ['id', 'status', 'message', 'timestamp', 'updatedAt']
         });
     }
 };
@@ -240,7 +271,7 @@ verificationCodeClassMethods = {
     }
 };
 
-//用户数据表的创建，注意这个只在第一次运行即可，后边数据表结构的修改，直接在mysql编辑工具navicat中进行
+//用户数据表的创建，后边数据表结构的修改，先在mysql编辑工具navicat中进行修改，然后再在代码中进行对应修改
 User = sequelize.define('users', {
     id: {
         type: Sequelize.INTEGER.UNSIGNED,
@@ -251,7 +282,7 @@ User = sequelize.define('users', {
         type: Sequelize.STRING(5),
         allowNull: false,
         validate: {
-            isInt: true
+            isInt: true //validate属性是用来添加验证，这些验证会在模型实例执行create、update和save自动执行，比如这里会自动验证这个字段值是不是整数
         }
     },
     phone: {
@@ -265,10 +296,20 @@ User = sequelize.define('users', {
         type: Sequelize.STRING(32),
         allowNull: false
     },
+    sex: {//新添字段性别，先在navicat中给数据库新增字段，再在这里根据类型对应定义
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue:0
+    },
     portraitUri: {
         type: Sequelize.STRING(256),
         allowNull: false,
         defaultValue: ''
+    },
+    freeImgList: {//新添字段免费图片列表
+        type: Sequelize.TEXT,
+        allowNull: false,
+        defaultValue: '{}'
     },
     passwordHash: {
         type: Sequelize.CHAR(40),
@@ -296,11 +337,11 @@ User = sequelize.define('users', {
     }
 }, {
     classMethods: userClassMethods,
-    paranoid: true,
-    indexes: [
+    paranoid: true,// （不是很理解）paranoid 属性只在启用 timestamps 时适用， 查询并加载软删除的数据，为true时，只会未删除的记录会返回，否则会返回删除和未删除的全部记录
+    indexes: [ //添加索引
         {
-            unique: true,
-            fields: ['region', 'phone']
+            unique: true, //唯一索引，['region', 'phone'] 组合值只能出现一次
+            fields: ['region', 'phone'] //多列索引，以区号和电话为索引，方便添加好友时，通过电话搜索用户？
         }
     ]
 });
@@ -656,22 +697,56 @@ LoginLog = sequelize.define('login_logs', {
     updatedAt: false
 });
 
-PayImgList = sequelize.define('pay_img_list', {
+//下面是新建的付费图片表
+PayImgList = sequelize.define('pay_imgs', {
     id: {
         type: Sequelize.INTEGER.UNSIGNED,
         primaryKey: true,
         autoIncrement: true
     },
-    userId: {
+    ownerId: { //外键，对应用户id，即图片拥有着，设置为索引，方便查询某个用户有哪些付费图片
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false
     },
-    portraitUri: {
+    imgUrl: {
         type: Sequelize.STRING(256),
         allowNull: false,
         defaultValue: ''
     },
+}, {
+    classMethods: payImgListClassMethods, //可以在里面定义一些方法，方便调用，比如通过用户id查询该用户所有付费图片
+    indexes: [
+        {
+            fields: ['ownerId'] //对用户id建立索引，方便查询某个用户有哪些付费图片
+        }
+    ]
 });
+
+PayImgList.belongsTo(User, {
+    foreignKey: 'ownerId',
+    constraints: true //建立外键约束？防止用户表User随意删除用户，付费图片表找不到对应的拥有该图片的用户
+});
+
+
+
+//下面是付费图片与用户之间的关系表，多对多关系
+// PayImgAndUserList = sequelize.define('pay_imgs_and_users', {
+//     id: {
+//         type: Sequelize.INTEGER.UNSIGNED,
+//         primaryKey: true,
+//         autoIncrement: true
+//     },
+//     userId: { //对应用户id
+//         type: Sequelize.INTEGER.UNSIGNED,
+//         allowNull: false
+//     },
+//     imgId: { //对应图片id
+//         type: Sequelize.INTEGER.UNSIGNED,
+//         allowNull: false
+//     },
+// }, {
+//     classMethods: payImgAndUserListClassMethods,
+// });
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList];
 

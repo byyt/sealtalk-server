@@ -71,14 +71,16 @@ validator = sequelize.Validator;
 router.post('/invite', function(req, res, next) {
   var currentUserId, friendId, message, timestamp;
   friendId = req.body.friendId;
+  console.log("friend id is %s",friendId);
   message = Utility.xss(req.body.message, FRIEND_REQUEST_MESSAGE_MAX_LENGTH);
   if (!validator.isLength(message, FRIEND_REQUEST_MESSAGE_MIN_LENGTH, FRIEND_REQUEST_MESSAGE_MAX_LENGTH)) {
     return res.status(400).send('Length of friend request message is out of limit.');
   }
   currentUserId = Session.getCurrentUserId(req);
+  console.log('%s invite user -> %s', currentUserId, friendId);
   timestamp = Date.now();
   Utility.log('%s invite user -> %s', currentUserId, friendId);
-  return Promise.all([
+  return Promise.all([  //Promise.all的解释网址 //https://blog.csdn.net/ixygj197875/article/details/79183823
     Friendship.getInfo(currentUserId, friendId), Friendship.getInfo(friendId, currentUserId), Blacklist.findOne({
       where: {
         userId: friendId,
@@ -168,7 +170,7 @@ router.post('/invite', function(req, res, next) {
         });
       });
     } else {
-      if (friendId === currentUserId) {
+      if (friendId === currentUserId) { //申请添加自己为好友？
         return Promise.all([
           Friendship.create({
             userId: currentUserId,
@@ -186,21 +188,22 @@ router.post('/invite', function(req, res, next) {
           }, resultMessage));
         });
       } else {
+        //sequelize.transaction以及后面的transaction: t，网址 https://segmentfault.com/a/1190000011583945 作用：如果一个或几个 promise 被拒绝，事务将回滚。
         return sequelize.transaction(function(t) {
           return Promise.all([
-            Friendship.create({
+            Friendship.create({ //在申请好友的时候，就进行数据插入，会有个状态设置，比如FRIENDSHIP_REQUESTING是申请中
               userId: currentUserId,
               friendId: friendId,
               message: '',
-              status: FRIENDSHIP_REQUESTING,
+              status: FRIENDSHIP_REQUESTING, //申请的一方状态是申请中
               timestamp: timestamp
             }, {
               transaction: t
-            }), Friendship.create({
+            }), Friendship.create({ //要插入第二条数据，
               userId: friendId,
               friendId: currentUserId,
               message: message,
-              status: FRIENDSHIP_REQUESTED,
+              status: FRIENDSHIP_REQUESTED, //被申请的一方，状态时已申请？
               timestamp: timestamp
             }, {
               transaction: t
@@ -208,8 +211,10 @@ router.post('/invite', function(req, res, next) {
           ]).then(function() {
             return Promise.all([DataVersion.updateFriendshipVersion(currentUserId, timestamp), DataVersion.updateFriendshipVersion(friendId, timestamp)]).then(function() {
               Session.getCurrentUserNickname(currentUserId, User).then(function(nickname) {
+                //推送添加好友通知？
                 return sendContactNotification(currentUserId, nickname, friendId, CONTACT_OPERATION_REQUEST, message, timestamp);
               });
+              //删除key是"friendship_all_" + currentUserId或friendId的缓存，在查询某个用户好友时，如果缓存中没有，查询出来后会存入缓存
               Cache.del("friendship_all_" + currentUserId);
               Cache.del("friendship_all_" + friendId);
               Utility.log('Invite result: %s %s', 'Sent', 'Request sent.');
@@ -231,7 +236,7 @@ router.post('/agree', function(req, res, next) {
   timestamp = Date.now();
   Utility.log('%s agreed to user -> %s', currentUserId, friendId);
   return sequelize.transaction(function(t) {
-    return Friendship.update({
+    return Friendship.update({ //申请好友的时候已经插入了数据，同意时只需更新数据，更新状态为FRIENDSHIP_AGREED
       status: FRIENDSHIP_AGREED,
       timestamp: timestamp
     }, {
@@ -245,7 +250,7 @@ router.post('/agree', function(req, res, next) {
       transaction: t
     }).then(function(arg) {
       var affectedCount;
-      affectedCount = arg[0];
+      affectedCount = arg[0]; //影响数据库的行数？
       if (affectedCount === 0) {
         return res.status(404).send('Unknown friend user or invalid status.');
       }
@@ -363,14 +368,14 @@ router.post('/set_display_name', function(req, res, next) {
   })["catch"](next);
 });
 
-router.get('/all', function(req, res, next) {
+router.get('/all', function(req, res, next) { //查询用户所有好友
   var currentUserId;
   currentUserId = Session.getCurrentUserId(req);
-  return Cache.get("friendship_all_" + currentUserId).then(function(friends) {
+  return Cache.get("friendship_all_" + currentUserId).then(function(friends) { //先尝试从缓存中取
     if (friends) {
       return res.send(new APIResult(200, friends));
     } else {
-      return Friendship.findAll({
+      return Friendship.findAll({ //如果缓存中没有，则查询数据库
         where: {
           userId: currentUserId
         },

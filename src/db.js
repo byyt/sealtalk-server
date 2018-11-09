@@ -309,7 +309,7 @@ User = sequelize.define('users', {
     freeImgList: {//新添字段免费图片列表
         type: Sequelize.TEXT,
         allowNull: false,
-        defaultValue: '{}'
+        defaultValue: '[]'//默认是个json数组的字符串
     },
     passwordHash: {
         type: Sequelize.CHAR(40),
@@ -722,6 +722,7 @@ PayImgList = sequelize.define('pay_imgs', {
     ]
 });
 
+//外键概念，简单学习网址 https://docs.microsoft.com/zh-cn/sql/relational-databases/tables/primary-and-foreign-key-constraints?view=sql-server-2017
 PayImgList.belongsTo(User, {
     foreignKey: 'ownerId',
     constraints: true //建立外键约束？防止用户表User随意删除用户，付费图片表找不到对应的拥有该图片的用户
@@ -729,7 +730,7 @@ PayImgList.belongsTo(User, {
 
 
 
-//下面是付费图片与用户之间的关系表，多对多关系
+//下面是付费图片与用户之间的关系表，多对多关系，简单学习网址 https://www.cnblogs.com/fengxuehuanlin/p/5325312.html
 // PayImgAndUserList = sequelize.define('pay_imgs_and_users', {
 //     id: {
 //         type: Sequelize.INTEGER.UNSIGNED,

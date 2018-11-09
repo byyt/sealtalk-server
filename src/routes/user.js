@@ -526,25 +526,21 @@ router.get('/get_user_detail', function (req, res, next) {
     return User.findById(userId, {
         attributes: ['id', 'phone', 'nickname', 'portraitUri', 'freeImgList']
     }).then(function (user) {
-        var results;
         if (!user) {
             return res.status(404).send('Unknown user.');
         }
-        results = Utility.encodeResults(user);//如果不填keys，encodeResult函数默认会对id加密
-        console.log(results);
-        var payImgs;
+        var results = Utility.encodeResults(user);
         PayImgList.findAll({
             where: {
                 ownerId: userId
             },
             attributes: ['imgUrl']
         }).then(function (payImgs) {
-            console.log(payImgs);
             var payImgsResult = Utility.encodeResults(payImgs);
-            results.payImgList = payImgsResult;
+            results.payImgList = payImgsResult; //返回的结果，除了免费图片字段，再加上还需要付费的图片的字段和对应的值
+            console.log(results);
+            return res.send(new APIResult(200, results));
         });
-        console.log(results);
-        return res.send(new APIResult(200, results));
     })["catch"](next);
 
 });

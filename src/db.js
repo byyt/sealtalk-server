@@ -2,7 +2,8 @@ var Blacklist, Config, DataVersion, Friendship, GROUP_CREATOR, GROUP_MEMBER, Gro
     LoginLog, Sequelize, User, Utility, VerificationCode, _, co, dataVersionClassMethods, friendshipClassMethods,
     groupClassMethods,
     groupMemberClassMethods, sequelize, userClassMethods, verificationCodeClassMethods,
-    PayImgList, PayImgAndUserList, payImgListClassMethods, payImgAndUserListClassMethods;
+    PayImgList, PayImgAndUserList, payImgListClassMethods, payImgAndUserListClassMethods,
+    PayWeChatAndUserList;
 
 Sequelize = require('sequelize');
 
@@ -299,12 +300,20 @@ User = sequelize.define('users', {
     sex: {//新添字段性别，先在navicat中给数据库新增字段，再在这里根据类型对应定义
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false,
-        defaultValue:0
+        defaultValue: 0
     },
     portraitUri: {
         type: Sequelize.STRING(256),
         allowNull: false,
         defaultValue: ''
+    },
+    weChat: {//微信号
+        type: Sequelize.STRING(64),
+        allowNull: true
+    },
+    weChatPrice: {//微信号价格
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: true
     },
     freeImgList: {//新添字段免费图片列表
         type: Sequelize.TEXT,
@@ -581,6 +590,8 @@ GroupSync = sequelize.define('group_syncs', {
     timestamps: false
 });
 
+//一直不知道这个表是做什么用的，如果某个表的数据发生变化，都会调用一下这个表，更新这个表对应的字段
+//其他表都在这个表有对应的字段，其他表有数据更新，会调用这个表更新对应的字段
 DataVersion = sequelize.define('data_versions', {
     userId: {
         type: Sequelize.INTEGER.UNSIGNED,
@@ -712,7 +723,7 @@ PayImgList = sequelize.define('pay_imgs', {
         type: Sequelize.STRING(256),
         allowNull: false,
         defaultValue: ''
-    },
+    }
 }, {
     classMethods: payImgListClassMethods, //可以在里面定义一些方法，方便调用，比如通过用户id查询该用户所有付费图片
     indexes: [
@@ -728,28 +739,88 @@ PayImgList.belongsTo(User, {
     constraints: true //建立外键约束？防止用户表User随意删除用户，付费图片表找不到对应的拥有该图片的用户
 });
 
+//下面是付费图片与用户之间的关系表，多对多关系，
+// 简单学习网址 https://www.cnblogs.com/fengxuehuanlin/p/5325312.html，https://blog.csdn.net/WiteWater/article/details/53213285
+//表示付费图片对应哪些用户是已经付费了的
+PayImgAndUserList = sequelize.define('pay_imgs_and_users', {
+    id: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    userId: { //对应用户id
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false
+    },
+    imgId: { //对应图片id
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false
+    }
+}, {
+    classMethods: payImgAndUserListClassMethods,
+    indexes: [
+        {
+            unique: true,
+            fields: ['userId', 'imgId',]
+        }, {
+            fields: ['userId'] //对userId建立索引，方便快速查询该用户已付费图片
+        }
+    ]
+});
 
+//外键一
+PayImgAndUserList.belongsTo(PayImgList, {
+    foreignKey: 'imgId',
+    constraints: true
+});
 
-//下面是付费图片与用户之间的关系表，多对多关系，简单学习网址 https://www.cnblogs.com/fengxuehuanlin/p/5325312.html
-// PayImgAndUserList = sequelize.define('pay_imgs_and_users', {
-//     id: {
-//         type: Sequelize.INTEGER.UNSIGNED,
-//         primaryKey: true,
-//         autoIncrement: true
-//     },
-//     userId: { //对应用户id
-//         type: Sequelize.INTEGER.UNSIGNED,
-//         allowNull: false
-//     },
-//     imgId: { //对应图片id
-//         type: Sequelize.INTEGER.UNSIGNED,
-//         allowNull: false
-//     },
-// }, {
-//     classMethods: payImgAndUserListClassMethods,
-// });
+//外键二
+PayImgAndUserList.belongsTo(User, {
+    foreignKey: 'userId',
+    constraints: true
+});
 
-module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList];
+//微信付费表，记录哪些用户对哪些微信已经付费，以及微信的价格
+PayWeChatAndUserList = sequelize.define('pay_wechat_and_users', {
+    id: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    userId: { //用户id
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false
+    },
+    weChat: { //微信号
+        type: Sequelize.STRING(64),
+        allowNull: false,
+        defaultValue: ''
+    },
+    weChatPrice: { //微信号价格
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0
+    }
+}, {
+    indexes: [
+        {
+            unique: true,
+            fields: ['userId', 'wechat']
+        }, {
+            fields: ['userId']
+        }
+    ]
+});
+
+PayWeChatAndUserList.belongsTo(User, {
+    foreignKey: 'userId',
+    constraints: true
+});
+
+// 新增表.sync({ alter: true }); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
+
+module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
+                    PayWeChatAndUserList];
 
 
 // //下面时新建表的例子，

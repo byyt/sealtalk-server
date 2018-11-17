@@ -309,7 +309,7 @@ User = sequelize.define('users', {
     freeImgList: {//新添字段免费图片列表
         type: Sequelize.TEXT,
         allowNull: false,
-        defaultValue: '[]'//默认是个json数组的字符串
+        defaultValue: '[]'//默认是个json数组的字符串，会报错？
     },
     passwordHash: {
         type: Sequelize.CHAR(40),

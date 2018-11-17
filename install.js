@@ -12,7 +12,8 @@ var execShell = function(shell, callback) {
 };
 
 var addSudo = function() {
-    return os.platform() == 'linux' ? 'sudo ' : '';
+    //从日志上看mac上系统值是darwin
+    return os.platform() == 'linux' || os.platform() == 'darwin' ? 'sudo ' : '';
 };
 
 var getMethod = function() {

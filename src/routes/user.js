@@ -1,7 +1,9 @@
 var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMember, GroupSync, LoginLog, PayImgList,
+    PayImgAndUserList, PayWeChatAndUserList,
     MAX_GROUP_MEMBER_COUNT, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH,
     PORTRAIT_URI_MAX_LENGTH, PORTRAIT_URI_MIN_LENGTH, Session, User, Utility, VerificationCode, _, co, express,
-    getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator;
+    getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator,
+    DbUtil;
 
 express = require('express');
 
@@ -25,9 +27,11 @@ Utility = require('../util/util').Utility;
 
 APIResult = require('../util/util').APIResult;
 
+DbUtil = require('./dbUtil');
+
 ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
     GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
-    PayImgList = ref[10];
+    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12];
 
 MAX_GROUP_MEMBER_COUNT = 500;
 
@@ -499,8 +503,8 @@ router.get('/get_recommend_users', function (req, res, next) {
     })["catch"](next);//后面这个["catch"](next);不要忘记加
 });
 
-//首页获取推荐用户信息列表
-router.get('/get_user_detail', function (req, res, next) {
+//详情页用户详细信息，信息只包括基本信息，免费图片，付费图片上面部分的内容；微信号、免费视频、付费视频等需要请求下面的其他接口
+router.get('/get_user_detail_one', function (req, res, next) {
     var userId;
     userId = req.query.id;
     userId = Utility.decodeIds(userId); //先对userId解码，传过来的是一个字符串
@@ -530,19 +534,139 @@ router.get('/get_user_detail', function (req, res, next) {
             return res.status(404).send('Unknown user.');
         }
         var results = Utility.encodeResults(user);
-        PayImgList.findAll({
+        return PayImgList.findAll({
             where: {
                 ownerId: userId
             },
-            attributes: ['imgUrl']
+            attributes: ['id', 'imgUrl']
         }).then(function (payImgs) {
-            var payImgsResult = Utility.encodeResults(payImgs);
-            results.payImgList = payImgsResult; //返回的结果，除了免费图片字段，再加上还需要付费的图片的字段和对应的值
+            // if (!payImgs) { //不需要做判空操作，如果没数据，findAll操作默认会返回一个空数组
+            // }
+            //得到当前用户的id
+            var currentUserId = Session.getCurrentUserId(req);
+            return PayImgAndUserList.findAll({ //查询当前用户有哪些已经付费的图片
+                where: {
+                    userId: currentUserId
+                },
+                attributes: [],
+                include: {
+                    model: PayImgList,
+                    attributes: ['id', 'imgUrl']
+                }
+            }).then(function (currentUserHasPayedImgs) {
+                    payImgs = Utility.encodeResultsNoKeys(payImgs);//将想查看的用户的付费图片转成json数组，用了自己写的函数，即不对id，方便与下面的id比较
+                    currentUserHasPayedImgs = Utility.encodeResults(currentUserHasPayedImgs); //将当前用户已经付费的图片转成json数组
+                    var isImgHasPayed = function (imgId) { //判断想查看的付费图片是否已经付费
+                        for (var i = 0, length = currentUserHasPayedImgs.length; i < length; i++) {
+                            if (imgId === currentUserHasPayedImgs[i].pay_img.id) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+                    var payImgsResult = []; //还未付费的图片，在客户端上显示模糊
+                    var jsonArrayStr = results.freeImgList; //免费图片，将已付费的图片也加入到免费图片中，客户端可以正常显示
+                    var freeImgList = JSON.parse(jsonArrayStr);
+
+                    for (var i = 0, length = payImgs.length; i < length; i++) {
+                        if (isImgHasPayed(payImgs[i].id)) {
+                            var json = {};
+                            json.imgUrl = payImgs[i].imgUrl;
+                            freeImgList.push(json);
+                        } else {
+                            payImgsResult.push(payImgs[i]);
+                        }
+
+                    }
+                    var freeImgListResult = JSON.stringify(freeImgList); //将json数组转成字符串
+                    payImgsResult = Utility.encodeResults(payImgsResult);
+                    results.freeImgList = freeImgListResult; //免费图片加上已付费的图片
+                    results.payImgList = payImgsResult; //还未付费的图片
+                    console.log(results);
+                    console.log("get_user_detail_one_success");
+                    return res.send(new APIResult(200, results));
+                }
+            );
+        });
+    })["catch"](next);
+});
+
+//获取用户详情，另外一半的内容，获取微信是否已经支付、免费视频、付费视频、
+router.get('/get_user_detail_two', function (req, res, next) {
+    var userId;
+    userId = req.query.id;
+    userId = Utility.decodeIds(userId); //先对userId解码，传过来的是一个字符串
+    return User.findById(userId, {
+        attributes: ['id', 'weChat', 'weChatPrice']
+    }).then(function (user) {
+        if (!user) {
+            return res.status(404).send('Unknown user.');
+        }
+        var results = Utility.encodeResults(user);
+        var currentUserId = Session.getCurrentUserId(req);
+        var weChat = results.weChat;
+        return PayWeChatAndUserList.findOne({ //查询微信是否可以查看，即是否已经付费
+            where: {
+                userId: currentUserId,
+                weChat: weChat
+            },
+            attributes: ['id']
+        }).then(function (payWeChatAndUserList) {
+            if (payWeChatAndUserList != null) { //表中有记录，说明已经付费，可以直接展示给用户
+                results.hasPayedWeChat = true;
+            } else {
+                results.hasPayedWeChat = false;
+            }
             console.log(results);
+            console.log("get_user_detail_two_success");
             return res.send(new APIResult(200, results));
         });
     })["catch"](next);
+});
 
+//用户支付付费图片
+router.post('/user_pay_img', function (req, res, next) {
+    var imgId = req.body.imgId;
+    // imgId = Utility.decodeIds(imgId);//不需要这句解密的代码，上面body.imgId直接给解密了？
+    var currentUserId = Session.getCurrentUserId(req);
+    return sequelize.transaction(function (t) {
+        return PayImgAndUserList.create({
+            userId: currentUserId,
+            imgId: imgId
+        }, {
+            transaction: t
+        }).then(function () {
+            //经过实践，在这里做返回，数据不一定已经插入到表里，在下面的then中做返回，能保证数据先插入到表内，再做返回
+        });
+    }).then(function (result) {
+        // 事务已被提交
+        // result 是 promise 链返回到事务回调的结果
+        //网址：https://github.com/demopark/sequelize-docs-Zh-CN/blob/master/transactions.md
+        res.send(new APIResult(200));
+    })["catch"](next);
+});
+
+//用户支付微信号
+router.post('/user_pay_wechat', function (req, res, next) {
+    var weChat = req.body.weChat;
+    var weChatPrice = req.body.weChatPrice;
+    var currentUserId = Session.getCurrentUserId(req);
+    return sequelize.transaction(function (t) {
+        return PayWeChatAndUserList.create({
+            userId: currentUserId,
+            weChat: weChat,
+            weChatPrice: weChatPrice
+        }, {
+            transaction: t
+        }).then(function () {
+            //经过实践，在这里做返回，数据不一定已经插入到表里，在下面的then中做返回，能保证数据先插入到表内，再做返回
+        });
+    }).then(function (result) {
+        // 事务已被提交
+        // result 是 promise 链返回到事务回调的结果
+        //网址：https://github.com/demopark/sequelize-docs-Zh-CN/blob/master/transactions.md
+        res.send(new APIResult(200));
+    })["catch"](next);
 });
 
 //详情页获取付费图片列表中哪些图片是该用户已经付费的，如果未付费，则客户端模糊展示

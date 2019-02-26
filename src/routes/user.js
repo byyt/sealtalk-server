@@ -193,14 +193,16 @@ router.post('/check_phone_available', function (req, res, next) {
 
 //完善个人资料，验证码登录通过后，如果未注册的，则完善个人资料后注册
 router.post('/register_code', function (req, res, next) {
-    var nickname, password, verificationToken;
+    var nickname, password, verificationToken, sex;
     nickname = Utility.xss(req.body.nickname, NICKNAME_MAX_LENGTH);
     password = req.body.password;
     verificationToken = req.body.verification_token;
+    sex = req.body.sex;
     console.log("register");
     console.log(nickname);
     console.log(password);
     console.log(verificationToken);
+    console.log(sex);
     if (password.indexOf(' ') > 0) {
         console.log("Password must have no space.");
         return res.status(400).send('Password must have no space.');
@@ -233,6 +235,7 @@ router.post('/register_code', function (req, res, next) {
                         nickname: nickname,
                         region: verification.region,
                         phone: verification.phone,
+                        sex: sex,
                         passwordHash: hash,
                         passwordSalt: salt.toString()
                     }, {
@@ -488,19 +491,52 @@ router.post('/login', function (req, res, next) {
 
 //首页获取推荐用户信息列表
 router.get('/get_recommend_users', function (req, res, next) {
+    // return User.findAll({
+    //     where: {},
+    //     attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'freeImgList']
+    // }).then(function (users) {
+    //     var results;
+    //     //如果不填keys，encodeResult函数默认会对id加sequelize.sync()密
+    //     results = Utility.encodeResults(users);
+    //     //打乱顺序，测试用，客户端每次刷新数据，得到结果不一样
+    //     results = results.sort(function () {
+    //         return 0.5 - Math.random()
+    //     });
+    //     return res.send(new APIResult(200, results));
+    // })["catch"](next);//后面这个["catch"](next);不要忘记加
+
+
+    var startIndex, pageSize, offset;
+    startIndex = req.query.startIndex;
+    pageSize = req.query.pageSize;
+    startIndex = parseInt(startIndex); //转成整数，否则出错
+    pageSize = parseInt(pageSize);
+    console.log(startIndex);
+    console.log(pageSize);
+    offset = startIndex * pageSize;
+    console.log(offset);
+
     return User.findAll({
         where: {},
+        offset: offset,
+        limit: pageSize,
         attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'freeImgList']
     }).then(function (users) {
-        var results;
+        var results = {};
         //如果不填keys，encodeResult函数默认会对id加sequelize.sync()密
-        results = Utility.encodeResults(users);
+        results.data = Utility.encodeResults(users);
+        results.nextIndex = startIndex + 1;
+
+        console.log(results);
+
         //打乱顺序，测试用，客户端每次刷新数据，得到结果不一样
-        results = results.sort(function () {
-            return 0.5 - Math.random()
-        });
+        // results = results.sort(function () {
+        //     return 0.5 - Math.random()
+        // });
         return res.send(new APIResult(200, results));
     })["catch"](next);//后面这个["catch"](next);不要忘记加
+
+
 });
 
 //详情页用户详细信息，信息只包括基本信息，免费图片，付费图片上面部分的内容；微信号、免费视频、付费视频等需要请求下面的其他接口

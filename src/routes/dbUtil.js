@@ -33,9 +33,12 @@ router = express.Router();
 
 validator = sequelize.Validator;
 
+
 DbUtil = (function () {
     function DbUtil() {
     }
+
+    DbUtil.local_host = "http://192.168.0.101:8081/";
 
     /**
      * 免费图片函数定义
@@ -49,6 +52,9 @@ DbUtil = (function () {
             }).then(function (user) {
                 var results = Utility.encodeResults(user); //将数据库数据转成json，是个json数组
                 var jsonArrayStr = results.freeImgList; //取出freeImgList字段中值，是个json数组的字符串
+                if (results.freeImgList == "" || results.freeImgList == null || results.freeImgList == undefined) {
+                    jsonArrayStr = "[]"
+                }
                 var jsonArray = JSON.parse(jsonArrayStr); //将字符串转成json数组
                 var json = {}; //定义一个json对象
                 json.imgUrl = imgUrl; //给json对象的imgUrl字段存入http://192.168.1.236:8081/0003.jpg
@@ -80,7 +86,7 @@ DbUtil = (function () {
                 var jsonArrayStr = results.freeImgList; //取出freeImgList字段中值，是个json数组的字符串
                 var jsonArray = JSON.parse(jsonArrayStr); //将字符串转成json数组
                 for (var i = 0; i < jsonArray.length; i++) { //查找imgUrl值是给定值的json
-                    if (jsonArray[i].imgUrl === imgUrl) {
+                    if (jsonArray[i].imgUrl === DbUtil.local_host + imgUrl) {
                         jsonArray.splice(i, 1); //删掉这个对象
                         break;
                     }
@@ -128,7 +134,7 @@ DbUtil = (function () {
         //这个是插入一条数据库后的回调，继续插入一条数据
         var callBack = function (fromIndex) {
             if (fromIndex <= toIndex) {
-                insertFreeImgUrlById(userId, 'http://192.168.1.236:8081/' + fromIndex + '.jpg', callBack, ++fromIndex);
+                DbUtil.insertFreeImgUrlById(userId, DbUtil.local_host + "renwu" + fromIndex + '.jpg', callBack, ++fromIndex);
             }
         };
         callBack(fromIndex);
@@ -143,7 +149,7 @@ DbUtil = (function () {
         sequelize.transaction(function (t) {
             return PayImgList.create({
                 ownerId: userId,
-                imgUrl: imgUrl
+                imgUrl: DbUtil.local_host + imgUrl
             }, {
                 transaction: t
             }).then(function (payImgList) {

@@ -564,70 +564,75 @@ router.get('/get_user_detail_one', function (req, res, next) {
 
     //下面是先不用缓存的，以便修改数据库数据时能及时返回给客户端，上线时加上缓存
     return User.findById(userId, {
-        attributes: ['id', 'phone', 'nickname', 'portraitUri', 'freeImgList']
+        attributes: ['id', 'nickname', 'sex', 'height', 'age', 'location', 'feedback_rate',
+            'followNum', 'fansNum', 'qianMing', 'freeImgList', 'skills']
     }).then(function (user) {
         if (!user) {
             return res.status(404).send('Unknown user.');
         }
         var results = Utility.encodeResults(user);
-        return PayImgList.findAll({
-            where: {
-                ownerId: userId
-            },
-            attributes: ['id', 'imgUrl']
-        }).then(function (payImgs) {
-            // if (!payImgs) { //不需要做判空操作，如果没数据，findAll操作默认会返回一个空数组
-            // }
-            //得到当前用户的id
-            var currentUserId = Session.getCurrentUserId(req);
-            return PayImgAndUserList.findAll({ //查询当前用户有哪些已经付费的图片
-                where: {
-                    userId: currentUserId
-                },
-                attributes: [],
-                include: {
-                    model: PayImgList,
-                    attributes: ['id', 'imgUrl']
-                }
-            }).then(function (currentUserHasPayedImgs) {
-                    payImgs = Utility.encodeResultsNoKeys(payImgs);//将想查看的用户的付费图片转成json数组，用了自己写的函数，即不对id，方便与下面的id比较
-                    currentUserHasPayedImgs = Utility.encodeResults(currentUserHasPayedImgs); //将当前用户已经付费的图片转成json数组
-                    var isImgHasPayed = function (imgId) { //判断想查看的付费图片是否已经付费
-                        for (var i = 0, length = currentUserHasPayedImgs.length; i < length; i++) {
-                            if (imgId === currentUserHasPayedImgs[i].pay_img.id) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    };
-                    var payImgsResult = []; //还未付费的图片，在客户端上显示模糊
-                    var jsonArrayStr = results.freeImgList; //免费图片，将已付费的图片也加入到免费图片中，客户端可以正常显示
-                    var freeImgList = JSON.parse(jsonArrayStr);
-
-                    for (var i = 0, length = payImgs.length; i < length; i++) {
-                        if (isImgHasPayed(payImgs[i].id)) {
-                            var json = {};
-                            json.imgUrl = payImgs[i].imgUrl;
-                            freeImgList.push(json);
-                        } else {
-                            payImgsResult.push(payImgs[i]);
-                        }
-
-                    }
-                    var freeImgListResult = JSON.stringify(freeImgList); //将json数组转成字符串
-                    payImgsResult = Utility.encodeResults(payImgsResult);
-                    results.freeImgList = freeImgListResult; //免费图片加上已付费的图片
-                    results.payImgList = payImgsResult; //还未付费的图片
-                    console.log(results);
-                    console.log("get_user_detail_one_success");
-                    return res.send(new APIResult(200, results));
-                }
-            );
-        });
+        return res.send(new APIResult(200, results));
+        //付费图片的处理移到get_user_detail_two中了
+        // return PayImgList.findAll({
+        //     where: {
+        //         ownerId: userId
+        //     },
+        //     attributes: ['id', 'imgUrl', 'imgPrice']
+        // }).then(function (payImgs) {
+        //     // if (!payImgs) { //不需要做判空操作，如果没数据，findAll操作默认会返回一个空数组
+        //     // }
+        //     //得到当前用户的id
+        //     var currentUserId = Session.getCurrentUserId(req);
+        //     return PayImgAndUserList.findAll({ //查询当前用户有哪些已经付费的图片
+        //         where: {
+        //             userId: currentUserId
+        //         },
+        //         attributes: [],
+        //         include: {
+        //             model: PayImgList,
+        //             attributes: ['id', 'imgUrl', 'imgPrice']
+        //         }
+        //     }).then(function (currentUserHasPayedImgs) {
+        //             payImgs = Utility.encodeResultsNoKeys(payImgs);//将想查看的用户的付费图片转成json数组，用了自己写的函数，即不对id，方便与下面的id比较
+        //             currentUserHasPayedImgs = Utility.encodeResults(currentUserHasPayedImgs); //将当前用户已经付费的图片转成json数组
+        //             var isImgHasPayed = function (imgId) { //判断想查看的付费图片是否已经付费
+        //                 for (var i = 0, length = currentUserHasPayedImgs.length; i < length; i++) {
+        //                     if (imgId === currentUserHasPayedImgs[i].pay_img.id) {
+        //                         return true;
+        //                     }
+        //                 }
+        //                 return false;
+        //             };
+        //             var notPayedImgList = []; //还未付费的图片，在客户端上显示模糊
+        //             var hasPayedImgList = []; //已付费的图片，在客户端上正常展示，与免费图片不一样
+        //             // var jsonArrayStr = results.freeImgList; //免费图片，将已付费的图片也加入到免费图片中，客户端可以正常显示
+        //             // var freeImgList = JSON.parse(jsonArrayStr);
+        //
+        //             for (var i = 0, length = payImgs.length; i < length; i++) {
+        //                 if (isImgHasPayed(payImgs[i].id)) {
+        //                     var json = {};
+        //                     json.imgUrl = payImgs[i].imgUrl;
+        //                     hasPayedImgList.push(json);
+        //                 } else {
+        //                     notPayedImgList.push(payImgs[i]);
+        //                 }
+        //
+        //             }
+        //             // var freeImgListResult = JSON.stringify(freeImgList); //将json数组转成字符串
+        //             // results.freeImgList = freeImgListResult; //免费图片加上已付费的图片
+        //             // notPayedImgList = Utility.encodeResults(notPayedImgList);
+        //             results.notPayedImgList = notPayedImgList; //还未付费的图片
+        //             results.hasPayedImgList = hasPayedImgList; //还未付费的图片
+        //             console.log(results);
+        //             console.log("get_user_detail_one_success");
+        //             return res.send(new APIResult(200, results));
+        //         }
+        //     );
+        // });
     })["catch"](next);
 });
 
-//获取用户详情，另外一半的内容，获取微信是否已经支付、免费视频、付费视频、
+//获取用户详情，另外一半的内容，获取微信是否已经支付、付费图片、付费视频
 router.get('/get_user_detail_two', function (req, res, next) {
     var userId;
     userId = req.query.id;
@@ -639,7 +644,7 @@ router.get('/get_user_detail_two', function (req, res, next) {
             return res.status(404).send('Unknown user.');
         }
         var results = Utility.encodeResults(user);
-        var currentUserId = Session.getCurrentUserId(req);
+        var currentUserId = Session.getCurrentUserId(req);//得到当前用户的id
         var weChat = results.weChat;
         return PayWeChatAndUserList.findOne({ //查询微信是否可以查看，即是否已经付费
             where: {
@@ -648,12 +653,70 @@ router.get('/get_user_detail_two', function (req, res, next) {
             },
             attributes: ['id']
         }).then(function (payWeChatAndUserList) {
+            //微信付费情况
             if (payWeChatAndUserList != null) { //表中有记录，说明已经付费，可以直接展示给用户
                 results.hasPayedWeChat = true;
             } else {
                 results.hasPayedWeChat = false;
             }
-            console.log(results);
+
+            //付费图片付费情况
+            return PayImgList.findAll({
+                where: {
+                    ownerId: userId
+                },
+                attributes: ['id', 'imgUrl', 'imgPrice']
+            }).then(function (payImgs) {
+                // if (!payImgs) { //不需要做判空操作，如果没数据，findAll操作默认会返回一个空数组
+                // }
+                return PayImgAndUserList.findAll({ //查询当前用户有哪些已经付费的图片
+                    where: {
+                        userId: currentUserId
+                    },
+                    attributes: [],
+                    include: {
+                        model: PayImgList,
+                        attributes: ['id', 'imgUrl', 'imgPrice']
+                    }
+                }).then(function (currentUserHasPayedImgs) {
+                        payImgs = Utility.encodeResultsNoKeys(payImgs);//将想查看的用户的付费图片转成json数组，用了自己写的函数，即不对id，方便与下面的id比较
+                        currentUserHasPayedImgs = Utility.encodeResults(currentUserHasPayedImgs); //将当前用户已经付费的图片转成json数组
+                        var isImgHasPayed = function (imgId) { //判断想查看的付费图片是否已经付费
+                            for (var i = 0, length = currentUserHasPayedImgs.length; i < length; i++) {
+                                if (imgId === currentUserHasPayedImgs[i].pay_img.id) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        };
+                        var notPayedImgList = []; //还未付费的图片，在客户端上显示模糊
+                        var hasPayedImgList = []; //已付费的图片，在客户端上正常展示，与免费图片不一样
+                        // var jsonArrayStr = results.freeImgList; //免费图片，将已付费的图片也加入到免费图片中，客户端可以正常显示
+                        // var freeImgList = JSON.parse(jsonArrayStr);
+
+                        for (var i = 0, length = payImgs.length; i < length; i++) {
+                            if (isImgHasPayed(payImgs[i].id)) {
+                                var json = {};
+                                json.imgUrl = payImgs[i].imgUrl;
+                                hasPayedImgList.push(json);
+                            } else {
+                                notPayedImgList.push(payImgs[i]);
+                            }
+
+                        }
+                        // var freeImgListResult = JSON.stringify(freeImgList); //将json数组转成字符串
+                        // results.freeImgList = freeImgListResult; //免费图片加上已付费的图片
+                        // notPayedImgList = Utility.encodeResults(notPayedImgList);
+                        results.notPayedImgList = notPayedImgList; //还未付费的图片
+                        results.hasPayedImgList = hasPayedImgList; //还未付费的图片
+                        console.log(results);
+                        console.log("get_user_detail_one_success");
+                        return res.send(new APIResult(200, results));
+                    }
+                );
+            });
+
+
             console.log("get_user_detail_two_success");
             return res.send(new APIResult(200, results));
         });
@@ -662,9 +725,11 @@ router.get('/get_user_detail_two', function (req, res, next) {
 
 //用户支付付费图片
 router.post('/user_pay_img', function (req, res, next) {
-    var imgId = req.body.imgId;
+    console.log("user_pay_img");
+    var imgId = req.body.image;
     // imgId = Utility.decodeIds(imgId);//不需要这句解密的代码，上面body.imgId直接给解密了？
     var currentUserId = Session.getCurrentUserId(req);
+    console.log(imgId);
     return sequelize.transaction(function (t) {
         return PayImgAndUserList.create({
             userId: currentUserId,
@@ -684,6 +749,7 @@ router.post('/user_pay_img', function (req, res, next) {
 
 //用户支付微信号
 router.post('/user_pay_wechat', function (req, res, next) {
+    console.log("user_pay_wechat");
     var weChat = req.body.weChat;
     var weChatPrice = req.body.weChatPrice;
     var currentUserId = Session.getCurrentUserId(req);

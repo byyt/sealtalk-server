@@ -174,7 +174,7 @@ Utility = (function () {
         return retVal;
     };
 
-    //仿照上面的函数写一个，没有参数key的，ji即不对id之类加密的，只是为了将数据库查询后的结果集转为json
+    //仿照上面的函数写一个，没有参数key的，即即不对id之类加密的，只是为了将数据库查询后的结果集转为json
     Utility.encodeResultsNoKeys = function (results, keys) {
         var retVal;
         if (results === null) {

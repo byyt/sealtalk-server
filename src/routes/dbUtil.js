@@ -41,11 +41,41 @@ DbUtil = (function () {
     DbUtil.local_host = "http://192.168.0.101:8081/";
 
     /**
+     * 更新个人信息
+     */
+    //更新某个用户个人信息，对应操作：用户修改个人资料
+    //注意，这个是新加的操作，没有带sequelize.transaction(，这样是可以并发执行的？
+    //如果带了sequelize.transaction(，没法同时执行多条该语句，sequelize.transaction(是为了保证执行的先后顺序？
+    //后边的所有语句我几乎都用了sequelize.transaction(
+    DbUtil.updateUserInfoById =
+        function (userId, nickname, sex, height, age, feedback_rate, location, followNum, fansNum, qianMing) {
+            return User.update({ //将结果更新到
+                nickname: nickname,
+                sex: sex,
+                height: height,
+                age: age,
+                feedback_rate: feedback_rate,
+                location: location,
+                followNum: followNum,
+                fansNum: fansNum,
+                qianMing: qianMing
+            }, {
+                where: {
+                    id: userId
+                }
+            }).then(function () {
+
+            });
+
+        }
+
+    /**
      * 免费图片函数定义
      */
     //向用户表中的某个用户插入一张免费图片，对应操作：用户上传一张免费图片
     //数据库操作与外边代码执行时异步的，所以传入一个回调，方便数据库操作完后，做后续的事
-    DbUtil.insertFreeImgUrlById = function (id, imgUrl, callBack, callBackParam) {
+    //带了sequelize.transaction(function (t) {，等于按顺序执行？不支持高并发同时操作？
+    DbUtil.insertFreeImgUrlByIdTransaction = function (id, imgUrl, callBack, callBackParam) {
         sequelize.transaction(function (t) {
             return User.findById(id, {
                 attributes: ['freeImgList']
@@ -57,7 +87,7 @@ DbUtil = (function () {
                 }
                 var jsonArray = JSON.parse(jsonArrayStr); //将字符串转成json数组
                 var json = {}; //定义一个json对象
-                json.imgUrl = imgUrl; //给json对象的imgUrl字段存入http://192.168.1.236:8081/0003.jpg
+                json.imgUrl = DbUtil.local_host + imgUrl; //给json对象的imgUrl字段存入http://192.168.0.101:8081/0003.jpg
                 jsonArray.push(json); //将该json加入到jsonArray的json数组里
                 var resultStr = JSON.stringify(jsonArray); //将json数组转成字符串
                 return User.update({ //将结果更新到
@@ -72,6 +102,41 @@ DbUtil = (function () {
                     };// 如果没有传入callBack，默认给一个空函数
                     callBack(callBackParam); //  调用传进来的callBack
                 });
+            });
+        });
+    };
+
+    //没带sequelize.transaction(function (t) 支持高并发同时操作
+    //但是freeImgList是字符串类型的json数组，不能同时对同一用户进行多个操作
+    //应该把这多个操作先转成一个字符串数组，在进行一次性插入修改
+    DbUtil.insertFreeImgUrlById = function (id, imgUrlArray) {
+        return User.findById(id, {
+            attributes: ['freeImgList']
+        }).then(function (user) {
+            var results = Utility.encodeResults(user); //将数据库数据转成json，是个json数组
+            if (results === null) {
+                return;
+            }
+
+            var jsonArrayStr = results.freeImgList; //取出freeImgList字段中值，是个json数组的字符串
+            if (results.freeImgList === "" || results.freeImgList === null || results.freeImgList === undefined) {
+                jsonArrayStr = "[]"
+            }
+            var jsonArray = JSON.parse(jsonArrayStr); //将字符串转成json数组
+            for (var i = 0; i < imgUrlArray.length; i++) {
+                var json = {}; //定义一个json对象
+                json.imgUrl = DbUtil.local_host + imgUrlArray[i]; //给json对象的imgUrl字段存入http://192.168.0.101:8081/0003.jpg
+                jsonArray.push(json); //将该json加入到jsonArray的json数组里
+            }
+            var resultStr = JSON.stringify(jsonArray); //将json数组转成字符串
+            return User.update({ //将结果更新到
+                freeImgList: resultStr,
+            }, {
+                where: {
+                    id: id
+                }
+            }).then(function () {
+
             });
         });
     };
@@ -109,7 +174,9 @@ DbUtil = (function () {
     };
 
     //清空某个用户的免费图片表，实际上就是把字段值设置为[]
-    DbUtil.clearFreeImgUrlById = function (id, callBack) {
+    //同时执行多条下面的语句，并发执行update，会执行失败，因为带了sequelize.transaction(function (t) {
+    //sequelize.transaction(function (t) {的作用是？保证先后顺序，保证数据安全？最终要不要加？
+    DbUtil.clearFreeImgUrlByIdTransaction = function (id, callBack) {
         sequelize.transaction(function (t) {
             return User.update({ //将结果更新到
                 freeImgList: '[]',
@@ -124,9 +191,23 @@ DbUtil = (function () {
             });
         });
     };
+    //同时执行多条下面的语句，并发执行update，可以执行成功，因为没带sequelize.transaction(function (t) {
+    //但数据不安全？
+    DbUtil.clearFreeImgUrlById = function (id) {
+        return User.update({ //将结果更新到
+            freeImgList: '[]',
+        }, {
+            where: {
+                id: id
+            }
+        }).then(function () {
+
+        });
+    };
 
     //对单个用户批量插入图片，插入的图片序号从fromIndex到toIndex
-    DbUtil.batchInsertFreeImgUrlById = function (userId, fromIndex, toIndex) {
+    //调用的是DbUtil.insertFreeImgUrlByIdTransaction，需要一条数据一条数据的处理，不支持高并发？
+    DbUtil.batchInsertFreeImgUrlByIdTransaction = function (userId, fromIndex, toIndex) {
         //直接循环调用插入操作不行，因为数据操作和这些代码操作是异步的，应该先插入完一条，回调函数再插入下一条
         // for (var i = fromIndex; i < toIndex; i++) {
         //     insertFreeImgUrlById(1, 'http://192.168.1.236:8081/000' + i + '.jpg');
@@ -134,10 +215,22 @@ DbUtil = (function () {
         //这个是插入一条数据库后的回调，继续插入一条数据
         var callBack = function (fromIndex) {
             if (fromIndex <= toIndex) {
-                DbUtil.insertFreeImgUrlById(userId, DbUtil.local_host + "renwu" + fromIndex + '.jpg', callBack, ++fromIndex);
+                DbUtil.insertFreeImgUrlByIdTransaction(userId, DbUtil.local_host + fromIndex + '.jpg', callBack, ++fromIndex);
             }
         };
         callBack(fromIndex);
+    };
+
+    //对单个用户批量插入图片，插入的图片序号从fromIndex到toIndex
+    //调用的是DbUtil.insertFreeImgUrlById，可以同时处理多条数据，支持高并发，安不安全？
+    //注意需要先把这个多个图片先转一个字符串的json数组，再一次性插入，否则同时操作会出错
+    DbUtil.batchInsertFreeImgUrlById = function (userId, fromIndex, toIndex) {
+        //这个同时插入多条数据，先转成一个字符串数组
+        var imgUrlArray = [];
+        for (var i = fromIndex; i < toIndex; i++) {
+            imgUrlArray[i - fromIndex] = i + '.jpg'
+        }
+        DbUtil.insertFreeImgUrlById(userId, imgUrlArray);
     };
 
     /**
@@ -145,11 +238,12 @@ DbUtil = (function () {
      */
 
     //插入单条数据，插入数据到付费图标表中，对应操作：用户上传一张付费图片
-    DbUtil.insertPayImgUrlById = function (userId, imgUrl) {
+    DbUtil.insertPayImgUrlById = function (userId, imgUrl, imgPrice) {
         sequelize.transaction(function (t) {
             return PayImgList.create({
                 ownerId: userId,
-                imgUrl: DbUtil.local_host + imgUrl
+                imgUrl: DbUtil.local_host + imgUrl,
+                imgPrice: imgPrice
             }, {
                 transaction: t
             }).then(function (payImgList) {
@@ -159,10 +253,10 @@ DbUtil = (function () {
     };
 
     //批量插入数据到付费图片表中
-    DbUtil.batchInsertPayImgUrlById = function (userId, fromIndex, toIndex) {
+    DbUtil.batchInsertPayImgUrlById = function (userId, fromIndex, toIndex, imgPrice) {
         //可以直接通过for循环执行插入操作，与批量更新user表的免费图片数据不同，那个需要在回调中一张一张插入
         for (var i = fromIndex; i <= toIndex; i++) {
-            insertPayImgUrlById(userId, 'http://192.168.1.236:8081/' + i + '.jpg');
+            DbUtil.insertPayImgUrlById(userId, DbUtil.local_host + i + '.jpg', imgPrice);
         }
     };
 
@@ -299,6 +393,60 @@ DbUtil = (function () {
             }).then(function (result) {
 
             });
+        });
+    };
+
+    //更新数据，对应操作：编辑个人技能。
+    //传入的参数是userId，以及一个json字符串，即类似"{技能名1:技能价格1,技能名2：技能价格2}"
+    DbUtil.updateUserSkillsByUserId = function (userId, skillsJsonStr) {
+        //本来是打逐一取出来替换，发现不用这么麻烦，将这个字符串替换即可，客户端传递完整的json字符串过来，然后进行整个替换
+        //但下面的代码方法还是值得参考的，以后可以借鉴
+        // return User.findById(userId, {
+        //     attributes: ['skills']
+        // }).then(function (user) {
+        //     var results = Utility.encodeResults(user); //将数据库数据转成json，是个json数组
+        //     if (results === null) {
+        //         return;
+        //     }
+        //
+        //     var jsonStr = results.skills; //取出skills字段中值，如果为空，则设置初始值为空json{}
+        //     if (jsonStr === "" || jsonStr === null || jsonStr === undefined) {
+        //         jsonStr = "{}"
+        //     }
+        //
+        //     var jsonOrigin = JSON.parse(jsonStr); //将原有技能字符串转成json
+        //     var jsonUpdate = JSON.parse(skillsJsonStr); //将新增加或修改的技能字符串转成json
+        //     //下面是合并两个json的函数，如果有相同的key，后面一个json的值会覆盖签名那个
+        //     var combineJson = function (jsonA, jsonB) {
+        //         for (var obj in jsonB) { //遍历jsonB，obj是key，jsonB[obj]是对应的值
+        //             jsonA[obj] = jsonB[obj];
+        //         }
+        //         return jsonA;
+        //     }
+        //
+        //     var jsonResult = combineJson(jsonOrigin, jsonUpdate);
+        //     var resultStr = JSON.stringify(jsonResult); //将json转成字符串
+        //     console.log(resultStr);
+        //     return User.update({ //将结果更新到
+        //         skills: resultStr,
+        //     }, {
+        //         where: {
+        //             id: userId
+        //         }
+        //     }).then(function () {
+        //
+        //     });
+        // });
+        //本来是打逐一取出来替换，发现不用这么麻烦，将这个字符串替换即可，客户端传递完整的json字符串过来，然后进行整个替换
+        //但上面的代码方法还是值得参考的，以后可以借鉴
+        return User.update({ //将结果更新到表中
+            skills: skillsJsonStr,
+        }, {
+            where: {
+                id: userId
+            }
+        }).then(function () {
+
         });
     };
 

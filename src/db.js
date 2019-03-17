@@ -302,10 +302,45 @@ User = sequelize.define('users', {
         allowNull: false,
         defaultValue: 0
     },
+    height: {//身高
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0
+    },
+    age: {//年龄
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0
+    },
     portraitUri: {
         type: Sequelize.STRING(256),
         allowNull: false,
         defaultValue: ''
+    },
+    freeImgList: {//新添字段免费图片列表，json数组的字符串
+        type: Sequelize.TEXT,
+        allowNull: true
+        // defaultValue: '[]'//默认是个json数组的字符串，会报错？
+    },
+    feedback_rate: {//好评率
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: true
+    },
+    location: {//位置信息
+        type: Sequelize.STRING(255),
+        allowNull: true
+    },
+    followNum: {//关注数
+        type: Sequelize.STRING(255),
+        allowNull: true
+    },
+    fansNum: {//粉丝数
+        type: Sequelize.STRING(255),
+        allowNull: true
+    },
+    qianMing: {//签名
+        type: Sequelize.TEXT,
+        allowNull: true
     },
     weChat: {//微信号
         type: Sequelize.STRING(64),
@@ -315,10 +350,9 @@ User = sequelize.define('users', {
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: true
     },
-    freeImgList: {//新添字段免费图片列表
+    skills: {//Ta的技能，json字符串
         type: Sequelize.TEXT,
-        allowNull: true,
-        // defaultValue: '[]'//默认是个json数组的字符串，会报错？
+        allowNull: true
     },
     passwordHash: {
         type: Sequelize.CHAR(40),
@@ -723,6 +757,10 @@ PayImgList = sequelize.define('pay_imgs', {
         type: Sequelize.STRING(256),
         allowNull: false,
         defaultValue: ''
+    },
+    imgPrice: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false
     }
 }, {
     classMethods: payImgListClassMethods, //可以在里面定义一些方法，方便调用，比如通过用户id查询该用户所有付费图片
@@ -817,10 +855,10 @@ PayWeChatAndUserList.belongsTo(User, {
     constraints: true
 });
 
-// 新增表.sync({ alter: true }); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
+// User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
-                    PayWeChatAndUserList];
+    PayWeChatAndUserList];
 
 
 // //下面时新建表的例子，

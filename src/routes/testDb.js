@@ -49,7 +49,7 @@ var DbUtil = require('./dbUtil');
 // DbUtil.updateUserInfoById(8, '小明同学8', 1, 170, 30, 96, 2, 28, 98, '撒付费电视打发发生地方');
 // DbUtil.updateUserInfoById(9, '小红同学9', 0, 172, 36, 97, 8, 55, 100, '山东发生的发生地方撒的发束腹带阿斯顿发');
 // DbUtil.updateUserInfoById(10, '小蓝同学10', 0, 188, 22, 95, 5, 65, 130, '阿斯顿发生的发生的发生的发生的发发');
-// DbUtil.updateUserInfoById(11, '小绿同学11', 1, 180, 18, 99, 6, 20, 120, '三大发生的发生发束腹带当时的发生地方');
+DbUtil.updateUserInfoById(11, '小绿同学11', 1, 180, 18, 99, 6, 20, 120, '三大发生的发生发束腹带当时的发生地方');
 
 //单条数据插入免费图片表
 // DbUtil.insertFreeImgUrlById(3, '20.jpg');
@@ -124,10 +124,10 @@ var DbUtil = require('./dbUtil');
 // DbUtil.clearPayWeChatAndUserListById(3);
 
 //更新用户的技能信息
-DbUtil.updateUserSkillsByUserId(3, "{\"吃饭\":\"298元／小时\",\"健身\":\"198元／小时\"}")
-DbUtil.updateUserSkillsByUserId(4, "{\"跑步\":\"298元／小时\"}")
-DbUtil.updateUserSkillsByUserId(5, "{\"跑步\":\"290元／小时\",\"健身\":\"298元／小时\",\"吃饭\":\"398元／小时\",\"看电影\":\"300元／小时\"}")
-DbUtil.updateUserSkillsByUserId(6, "{\"跑步\":\"200元／小时\",\"健身\":\"198元／小时\"}")
-DbUtil.updateUserSkillsByUserId(7, "{\"跑步\":\"390元／小时\",\"健身\":\"892元／小时\",\"吃饭\":\"398元／小时\",\"看电影\":\"500元／小时\"}")
-DbUtil.updateUserSkillsByUserId(8, "{\"跑步\":\"295元／小时\",\"健身\":\"298元／小时\",\"吃饭\":\"498元／小时\",\"看电影\":\"320元／小时\"}")
+// DbUtil.updateUserSkillsByUserId(3, "{\"吃饭\":\"298元／小时\",\"健身\":\"198元／小时\"}")
+// DbUtil.updateUserSkillsByUserId(4, "{\"跑步\":\"298元／小时\"}")
+// DbUtil.updateUserSkillsByUserId(5, "{\"跑步\":\"290元／小时\",\"健身\":\"298元／小时\",\"吃饭\":\"398元／小时\",\"看电影\":\"300元／小时\"}")
+// DbUtil.updateUserSkillsByUserId(6, "{\"跑步\":\"200元／小时\",\"健身\":\"198元／小时\"}")
+// DbUtil.updateUserSkillsByUserId(7, "{\"跑步\":\"390元／小时\",\"健身\":\"892元／小时\",\"吃饭\":\"398元／小时\",\"看电影\":\"500元／小时\"}")
+// DbUtil.updateUserSkillsByUserId(8, "{\"跑步\":\"295元／小时\",\"健身\":\"298元／小时\",\"吃饭\":\"498元／小时\",\"看电影\":\"320元／小时\"}")
 

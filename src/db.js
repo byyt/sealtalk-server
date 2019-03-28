@@ -297,6 +297,11 @@ User = sequelize.define('users', {
         type: Sequelize.STRING(32),
         allowNull: false
     },
+    portraitUri: {
+        type: Sequelize.STRING(256),
+        allowNull: false,
+        defaultValue: ''
+    },
     sex: {//新添字段性别，先在navicat中给数据库新增字段，再在这里根据类型对应定义
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false,
@@ -311,11 +316,6 @@ User = sequelize.define('users', {
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false,
         defaultValue: 0
-    },
-    portraitUri: {
-        type: Sequelize.STRING(256),
-        allowNull: false,
-        defaultValue: ''
     },
     freeImgList: {//新添字段免费图片列表，json数组的字符串
         type: Sequelize.TEXT,

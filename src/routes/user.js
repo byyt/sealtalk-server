@@ -780,6 +780,35 @@ router.get('/get_imgpay_info', function (req, res, next) {
     })));
 });
 
+//个人编辑页，修改用户信息
+//testDb.js中的batchInsertFreeImgUrlById（系列插入免费图片）、updateUserInfoById（更新用户基本信息）
+//batchInsertFreeImgUrlById是为了方便插入假数据编写的，实际中，客户端直接传最终的json字符串过来直接更新该字段即可
+//注意，更新用户名、头像没这么简单，涉及融云那边的更新，看下面就知道了，先写着看到效果，以后再说
+router.post('/update_user_info', function (req, res, next) {
+    console.log("update_user_info");
+    //前期记得做一下校验，参考一下下面的设置昵称，头像的函数
+    //这里我为了方便直接更新里，就当客户端传来了合法的数据
+    var currentUserId = Session.getCurrentUserId(req);
+    var timestamp = Date.now();
+    return User.update({ //将结果更新到数据库
+        nickname: req.body.nickname,
+        sex: req.body.sex,
+        height: req.body.height,
+        age: req.body.age,
+        location: req.body.location,
+        qianMing: req.body.qianMing,
+        freeImgList: req.body.freeImgList,
+        timestamp: timestamp
+    }, {
+        where: {
+            id: currentUserId
+        }
+    }).then(function () {
+        return res.send(new APIResult(200));
+
+    })["catch"](next);
+});
+
 router.post('/logout', function (req, res) {
     res.clearCookie(Config.AUTH_COOKIE_NAME);
     return res.send(new APIResult(200));

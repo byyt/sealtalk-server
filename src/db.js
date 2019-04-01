@@ -312,7 +312,7 @@ User = sequelize.define('users', {
         allowNull: false,
         defaultValue: 0
     },
-    age: {//年龄
+    birthday: {//出生日期，时间戳
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false,
         defaultValue: 0
@@ -330,6 +330,10 @@ User = sequelize.define('users', {
         type: Sequelize.STRING(255),
         allowNull: true
     },
+    suoZaiDi: {//所在地
+        type: Sequelize.STRING(255),
+        allowNull: true
+    },
     followNum: {//关注数
         type: Sequelize.STRING(255),
         allowNull: true
@@ -339,6 +343,10 @@ User = sequelize.define('users', {
         allowNull: true
     },
     qianMing: {//签名
+        type: Sequelize.TEXT,
+        allowNull: true
+    },
+    xqah: {//兴趣爱好
         type: Sequelize.TEXT,
         allowNull: true
     },
@@ -855,7 +863,7 @@ PayWeChatAndUserList.belongsTo(User, {
     constraints: true
 });
 
-// User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
+User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
     PayWeChatAndUserList];

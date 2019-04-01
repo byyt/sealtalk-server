@@ -564,8 +564,8 @@ router.get('/get_user_detail_one', function (req, res, next) {
 
     //下面是先不用缓存的，以便修改数据库数据时能及时返回给客户端，上线时加上缓存
     return User.findById(userId, {
-        attributes: ['id', 'nickname', 'sex', 'height', 'age', 'location', 'feedback_rate',
-            'followNum', 'fansNum', 'qianMing', 'freeImgList', 'skills']
+        attributes: ['id', 'nickname', 'sex', 'portraitUri', 'height', 'birthday', 'location', 'location', 'suoZaiDi',
+            'feedback_rate', 'followNum', 'fansNum', 'qianMing', 'xqah', 'freeImgList', 'skills']
     }).then(function (user) {
         if (!user) {
             return res.status(404).send('Unknown user.');
@@ -792,11 +792,13 @@ router.post('/update_user_info', function (req, res, next) {
     var timestamp = Date.now();
     return User.update({ //将结果更新到数据库
         nickname: req.body.nickname,
+        portraitUri: req.body.portraitUri,
         sex: req.body.sex,
         height: req.body.height,
-        age: req.body.age,
-        location: req.body.location,
+        birthday: req.body.birthday,
+        suoZaiDi: req.body.suoZaiDi,
         qianMing: req.body.qianMing,
+        xqah: req.body.xqah,
         freeImgList: req.body.freeImgList,
         timestamp: timestamp
     }, {

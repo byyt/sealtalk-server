@@ -89,9 +89,10 @@ parameterPreprocessor = function (req, res, next) {
             req.body[prop] = Utility.decodeIds(req.body[prop]);
         }
         //req.body[prop]是body中的key prop对应的值，下面的意思就是除了几个key以外，其他key对应的值不能为空
-        if (Utility.isEmpty(req.body[prop]) && prop !== 'displayName' && prop !== 'pushContent' && prop !== 'bulletin') {
-            return res.status(400).send("Empty " + prop + ".");
-        }
+        //我说怎么有时候请求会莫名的报错，原来是这里的原因，key对应的值不能为空，不知道这行作用是什么，把它注释掉
+        // if (Utility.isEmpty(req.body[prop]) && prop !== 'displayName' && prop !== 'pushContent' && prop !== 'bulletin') {
+        //     return res.status(400).send("Empty " + prop + ".");
+        // }
     }
     return next();
 };

@@ -49,7 +49,14 @@ var DbUtil = require('./dbUtil');
 // DbUtil.updateUserInfoById(8, '小明同学8', 1, 170, 30, 96, 2, 28, 98, '撒付费电视打发发生地方');
 // DbUtil.updateUserInfoById(9, '小红同学9', 0, 172, 36, 97, 8, 55, 100, '山东发生的发生地方撒的发束腹带阿斯顿发');
 // DbUtil.updateUserInfoById(10, '小蓝同学10', 0, 188, 22, 95, 5, 65, 130, '阿斯顿发生的发生的发生的发生的发发');
-DbUtil.updateUserInfoById(11, '小绿同学11', 1, 180, 18, 99, 6, 20, 120, '三大发生的发生发束腹带当时的发生地方');
+// DbUtil.updateUserInfoById(11, '小绿同学11', 1, 180, 18, 99, 6, 20, 120, '三大发生的发生发束腹带当时的发生地方');
+
+//根据userId更新用户经纬度还有geohash
+DbUtil.updateUserLocationById(4, 113.9323425293, 22.7426228824);
+DbUtil.updateUserLocationById(5, 113.9749145508, 22.7255238111);
+DbUtil.updateUserLocationById(6, 113.9615249634, 22.6808661616);
+DbUtil.updateUserLocationById(7, 114.0590286255, 22.7840950725);
+DbUtil.updateUserLocationById(8, 114.1850280762, 22.8261875305);
 
 //单条数据插入免费图片表
 // DbUtil.insertFreeImgUrlById(3, '20.jpg');

@@ -3,7 +3,7 @@ var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMe
     MAX_GROUP_MEMBER_COUNT, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH,
     PORTRAIT_URI_MAX_LENGTH, PORTRAIT_URI_MIN_LENGTH, Session, User, Utility, VerificationCode, _, co, express,
     getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator,
-    DbUtil;
+    DbUtil, Geohash;
 
 express = require('express');
 
@@ -29,6 +29,8 @@ APIResult = require('../util/util').APIResult;
 
 DbUtil = require('./dbUtil');
 
+Geohash = require('ngeohash');
+
 ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
     GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
     PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12];
@@ -52,6 +54,9 @@ rongCloud.init(Config.RONGCLOUD_APP_KEY, Config.RONGCLOUD_APP_SECRET);
 router = express.Router();
 
 validator = sequelize.Validator;
+
+const Sequelize = require('sequelize');
+const Op = Sequelize.Op;
 
 regionMap = {
     '86': 'zh-CN'
@@ -490,7 +495,7 @@ router.post('/login', function (req, res, next) {
 });
 
 //首页获取推荐用户信息列表
-router.get('/get_recommend_users', function (req, res, next) {
+router.get('/get_recommend_users1', function (req, res, next) {
     // return User.findAll({
     //     where: {},
     //     attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'freeImgList']
@@ -520,22 +525,125 @@ router.get('/get_recommend_users', function (req, res, next) {
         where: {},
         offset: offset,
         limit: pageSize,
-        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'freeImgList']
+        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'freeImgList']
     }).then(function (users) {
         var results = {};
         //如果不填keys，encodeResult函数默认会对id加sequelize.sync()密
-        results.data = Utility.encodeResults(users);
-        results.nextIndex = startIndex + 1;
+        var userJsonArray = Utility.encodeResults(users); //用户json数组
+        var currentUserId = Session.getCurrentUserId(req);
+        //依次计算用户与请求用户之间的距离
+        return User.findById(currentUserId, {
+            attributes: ['longitude', 'latitude']
+        }).then(function (ordinaryUser) {
+            if (!ordinaryUser) {
+                return res.status(404).send('Unknown ordinary user.');
+            }
+            var ordinaryResults = Utility.encodeResults(ordinaryUser);
+            var ordinaryLongitude = ordinaryResults.longitude;
+            var ordinaryLatitude = ordinaryResults.latitude;
+            console.log(ordinaryResults);
+            //依次计算用户与请求用户之间的距离，将字段distance加进去
+            for (var i = 0, length = userJsonArray.length; i < length; i++) {
+                userJsonArray[i].distance =
+                    GetDistance(userJsonArray[i].latitude, userJsonArray[i].longitude, ordinaryLatitude, ordinaryLongitude);//计算两点距离
+            }
+            results.data = userJsonArray;
+            results.nextIndex = startIndex + 1;
+            console.log(results);
+            return res.send(new APIResult(200, results));
+        });
 
-        console.log(results);
-
-        //打乱顺序，测试用，客户端每次刷新数据，得到结果不一样
-        // results = results.sort(function () {
-        //     return 0.5 - Math.random()
-        // });
-        return res.send(new APIResult(200, results));
     })["catch"](next);//后面这个["catch"](next);不要忘记加
 
+});
+
+//首页获取附近用户信息列表
+// router.get('/get_nearby_users', function (req, res, next) {
+router.get('/get_recommend_users', function (req, res, next) {
+    var startIndex, pageSize, offset, i;
+    startIndex = req.query.startIndex;
+    pageSize = req.query.pageSize;
+    startIndex = parseInt(startIndex); //转成整数，否则出错
+    pageSize = parseInt(pageSize);
+    console.log(startIndex);
+    console.log(pageSize);
+    offset = startIndex * pageSize;
+    console.log(offset);
+
+
+    var currentUserId = Session.getCurrentUserId(req);
+    //依次计算用户与请求用户之间的距离
+    return User.findById(currentUserId, {
+        attributes: ['longitude', 'latitude', 'geohash']
+    }).then(function (ordinaryUser) {
+        if (!ordinaryUser) {
+            return res.status(404).send('Unknown ordinary user.');
+        }
+        var ordinaryResults = Utility.encodeResults(ordinaryUser);
+        var ordinaryLongitude = ordinaryResults.longitude;
+        var ordinaryLatitude = ordinaryResults.latitude;
+        var ordinaryGeohash = ordinaryResults.geohash;
+        console.log(ordinaryResults);
+        //得到一个数组，ordinaryGeohash的8个邻居
+        var neighbors = Geohash.neighbors(ordinaryGeohash);
+        neighbors.splice(0, 0, ordinaryGeohash);//将ordinaryGeohash插入数组第一个位置
+        console.log(neighbors);
+        //依次对这9个geohash进行模糊查询，得到的点就是附近的人，最后再由近到远排序
+        for (i = 0; i < neighbors.length; i++) {
+            User.findAll({
+                attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'geohash', 'freeImgList'],
+                where: {
+                    geohash: {
+                        // 模糊查询
+                        [Op.like]: neighbors[i] + '%'
+                    }
+                }
+            }).then(function (users) {
+                var subResults = Utility.encodeResults(users);
+                console.log(subResults);
+            });
+
+            userJsonArray[i].distance =
+                GetDistance(userJsonArray[i].latitude, userJsonArray[i].longitude, ordinaryLatitude, ordinaryLongitude);//计算两点距离
+        }
+
+        //依次计算用户与请求用户之间的距离，将字段distance加进去
+
+        console.log(results);
+        return res.send(new APIResult(200, results));
+    });
+
+    return User.findAll({
+        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'freeImgList'],
+        where: {}
+    }).then(function (users) {
+        var results = {};
+        //如果不填keys，encodeResult函数默认会对id加sequelize.sync()密
+        var userJsonArray = Utility.encodeResults(users); //用户json数组
+        var currentUserId = Session.getCurrentUserId(req);
+        //依次计算用户与请求用户之间的距离
+        return User.findById(currentUserId, {
+            attributes: ['longitude', 'latitude']
+        }).then(function (ordinaryUser) {
+            if (!ordinaryUser) {
+                return res.status(404).send('Unknown ordinary user.');
+            }
+            var ordinaryResults = Utility.encodeResults(ordinaryUser);
+            var ordinaryLongitude = ordinaryResults.longitude;
+            var ordinaryLatitude = ordinaryResults.latitude;
+            console.log(ordinaryResults);
+            //依次计算用户与请求用户之间的距离，将字段distance加进去
+            for (var i = 0, length = userJsonArray.length; i < length; i++) {
+                userJsonArray[i].distance =
+                    GetDistance(userJsonArray[i].latitude, userJsonArray[i].longitude, ordinaryLatitude, ordinaryLongitude);//计算两点距离
+            }
+            results.data = userJsonArray;
+            results.nextIndex = startIndex + 1;
+            console.log(results);
+            return res.send(new APIResult(200, results));
+        });
+
+    })["catch"](next);//后面这个["catch"](next);不要忘记加
 
 });
 
@@ -575,6 +683,8 @@ router.get('/get_user_detail_one', function (req, res, next) {
         var results = Utility.encodeResults(user);
         var targetLongitude = results.longitude;
         var targetLatitude = results.latitude;
+        console.log(targetLongitude);
+        console.log(targetLatitude);
         return User.findById(currentUserId, {
             attributes: ['longitude', 'latitude']
         }).then(function (ordinaryUser) {
@@ -584,6 +694,7 @@ router.get('/get_user_detail_one', function (req, res, next) {
             var ordinaryResults = Utility.encodeResults(ordinaryUser);
             var ordinaryLongitude = ordinaryResults.longitude;
             var ordinaryLatitude = ordinaryResults.latitude;
+            console.log(ordinaryResults);
             results.distance = GetDistance(targetLatitude, targetLongitude, ordinaryLatitude, ordinaryLongitude);//计算两点距离
             console.log(results);
             return res.send(new APIResult(200, results));
@@ -774,10 +885,12 @@ router.post('/update_user_info', function (req, res, next) {
 router.post('/update_user_location', function (req, res, next) {
     console.log("update_user_location");
     var currentUserId = Session.getCurrentUserId(req);
+    var geohash = Geohash.encode(req.body.latitude, req.body.longitude, 4)
     var timestamp = Date.now();
     return User.update({ //将结果更新到数据库
         longitude: req.body.longitude,
         latitude: req.body.latitude,
+        geohash: geohash,
         timestamp: timestamp
     }, {
         where: {

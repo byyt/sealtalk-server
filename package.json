@@ -33,10 +33,11 @@
     "lru-cache": "^4.0.1",
     "moment": "^2.10.6",
     "mysql": "^2.9.0",
+    "ngeohash": "^0.6.3",
     "qiniu": "^6.1.8",
     "rongcloud-sdk": "1.0.3",
     "semver": "^5.1.0",
-    "sequelize": "^3.8.0",
+    "sequelize": "^3.34.0",
     "underscore": "^1.8.3",
     "xss": "^0.2.13"
   },

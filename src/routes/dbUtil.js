@@ -1,7 +1,7 @@
 var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMember, GroupSync, LoginLog, PayImgList,
     PayImgAndUserList, PayWeChatAndUserList,
     Session, User, Utility, VerificationCode, _, co, express,
-    moment, qiniu, ref, rongCloud, router, sequelize, validator;
+    moment, qiniu, ref, rongCloud, router, sequelize, validator, Geohash;
 
 express = require('express');
 
@@ -24,6 +24,8 @@ Session = require('../util/session');
 Utility = require('../util/util').Utility;
 
 APIResult = require('../util/util').APIResult;
+
+Geohash = require('ngeohash');
 
 ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
     GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
@@ -59,6 +61,27 @@ DbUtil = (function () {
                 followNum: followNum,
                 fansNum: fansNum,
                 qianMing: qianMing
+            }, {
+                where: {
+                    id: userId
+                }
+            }).then(function () {
+
+            });
+
+        }
+
+    /**
+     * 更新个人信息
+     */
+    //更新某个用户经纬度还有geohash，对应操作：用户上报自己的地理位置
+    DbUtil.updateUserLocationById =
+        function (userId, longitude, latitude) {
+            var geohash = Geohash.encode(latitude, longitude, 4)
+            return User.update({ //将结果更新到
+                latitude: latitude,
+                longitude: longitude,
+                geohash: geohash
             }, {
                 where: {
                     id: userId

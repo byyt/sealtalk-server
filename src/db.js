@@ -334,6 +334,10 @@ User = sequelize.define('users', {
         type: Sequelize.DOUBLE,
         allowNull: true
     },
+    geohash: {//geohash字符串，用于匹配附近的人
+        type: Sequelize.STRING(20),
+        allowNull: true
+    },
     location: {//位置信息，暂时用不到
         type: Sequelize.STRING(255),
         allowNull: true

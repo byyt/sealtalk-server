@@ -541,9 +541,10 @@ router.get('/get_recommend_users', function (req, res, next) {
 
 //详情页用户详细信息，信息只包括基本信息，免费图片，付费图片上面部分的内容；微信号、免费视频、付费视频等需要请求下面的其他接口
 router.get('/get_user_detail_one', function (req, res, next) {
-    var userId;
+    var userId, currentUserId;
     userId = req.query.id;
     userId = Utility.decodeIds(userId); //先对userId解码，传过来的是一个字符串
+    currentUserId = Session.getCurrentUserId(req);
     // return Cache.get("user_" + userId).then(function (user) { //先尝试从缓存中取
     //     if (user) {
     //         return res.send(new APIResult(200, user));
@@ -564,71 +565,30 @@ router.get('/get_user_detail_one', function (req, res, next) {
 
     //下面是先不用缓存的，以便修改数据库数据时能及时返回给客户端，上线时加上缓存
     return User.findById(userId, {
-        attributes: ['id', 'nickname', 'sex', 'portraitUri', 'height', 'birthday', 'location', 'location', 'suoZaiDi',
+        attributes: ['id', 'nickname', 'sex', 'portraitUri', 'height', 'birthday', 'longitude', 'latitude', 'suoZaiDi',
             'feedback_rate', 'followNum', 'fansNum', 'qianMing', 'xqah', 'freeImgList', 'skills']
     }).then(function (user) {
         if (!user) {
-            return res.status(404).send('Unknown user.');
+            return res.status(404).send('Unknown target user.');
         }
+        //计算目标用户与发起请求的用户之间的距离
         var results = Utility.encodeResults(user);
-        return res.send(new APIResult(200, results));
-        //付费图片的处理移到get_user_detail_two中了
-        // return PayImgList.findAll({
-        //     where: {
-        //         ownerId: userId
-        //     },
-        //     attributes: ['id', 'imgUrl', 'imgPrice']
-        // }).then(function (payImgs) {
-        //     // if (!payImgs) { //不需要做判空操作，如果没数据，findAll操作默认会返回一个空数组
-        //     // }
-        //     //得到当前用户的id
-        //     var currentUserId = Session.getCurrentUserId(req);
-        //     return PayImgAndUserList.findAll({ //查询当前用户有哪些已经付费的图片
-        //         where: {
-        //             userId: currentUserId
-        //         },
-        //         attributes: [],
-        //         include: {
-        //             model: PayImgList,
-        //             attributes: ['id', 'imgUrl', 'imgPrice']
-        //         }
-        //     }).then(function (currentUserHasPayedImgs) {
-        //             payImgs = Utility.encodeResultsNoKeys(payImgs);//将想查看的用户的付费图片转成json数组，用了自己写的函数，即不对id，方便与下面的id比较
-        //             currentUserHasPayedImgs = Utility.encodeResults(currentUserHasPayedImgs); //将当前用户已经付费的图片转成json数组
-        //             var isImgHasPayed = function (imgId) { //判断想查看的付费图片是否已经付费
-        //                 for (var i = 0, length = currentUserHasPayedImgs.length; i < length; i++) {
-        //                     if (imgId === currentUserHasPayedImgs[i].pay_img.id) {
-        //                         return true;
-        //                     }
-        //                 }
-        //                 return false;
-        //             };
-        //             var notPayedImgList = []; //还未付费的图片，在客户端上显示模糊
-        //             var hasPayedImgList = []; //已付费的图片，在客户端上正常展示，与免费图片不一样
-        //             // var jsonArrayStr = results.freeImgList; //免费图片，将已付费的图片也加入到免费图片中，客户端可以正常显示
-        //             // var freeImgList = JSON.parse(jsonArrayStr);
-        //
-        //             for (var i = 0, length = payImgs.length; i < length; i++) {
-        //                 if (isImgHasPayed(payImgs[i].id)) {
-        //                     var json = {};
-        //                     json.imgUrl = payImgs[i].imgUrl;
-        //                     hasPayedImgList.push(json);
-        //                 } else {
-        //                     notPayedImgList.push(payImgs[i]);
-        //                 }
-        //
-        //             }
-        //             // var freeImgListResult = JSON.stringify(freeImgList); //将json数组转成字符串
-        //             // results.freeImgList = freeImgListResult; //免费图片加上已付费的图片
-        //             // notPayedImgList = Utility.encodeResults(notPayedImgList);
-        //             results.notPayedImgList = notPayedImgList; //还未付费的图片
-        //             results.hasPayedImgList = hasPayedImgList; //还未付费的图片
-        //             console.log(results);
-        //             console.log("get_user_detail_one_success");
-        //             return res.send(new APIResult(200, results));
-        //         }
-        //     );
-        // });
+        var targetLongitude = results.longitude;
+        var targetLatitude = results.latitude;
+        return User.findById(currentUserId, {
+            attributes: ['longitude', 'latitude']
+        }).then(function (ordinaryUser) {
+            if (!ordinaryUser) {
+                return res.status(404).send('Unknown ordinary user.');
+            }
+            var ordinaryResults = Utility.encodeResults(ordinaryUser);
+            var ordinaryLongitude = ordinaryResults.longitude;
+            var ordinaryLatitude = ordinaryResults.latitude;
+            results.distance = GetDistance(targetLatitude, targetLongitude, ordinaryLatitude, ordinaryLongitude);//计算两点距离
+            console.log(results);
+            return res.send(new APIResult(200, results));
+        });
+
     })["catch"](next);
 });
 
@@ -710,7 +670,7 @@ router.get('/get_user_detail_two', function (req, res, next) {
                         results.notPayedImgList = notPayedImgList; //还未付费的图片
                         results.hasPayedImgList = hasPayedImgList; //还未付费的图片
                         console.log(results);
-                        console.log("get_user_detail_one_success");
+                        console.log("get_user_detail_two_success");
                         return res.send(new APIResult(200, results));
                     }
                 );
@@ -807,7 +767,24 @@ router.post('/update_user_info', function (req, res, next) {
         }
     }).then(function () {
         return res.send(new APIResult(200));
+    })["catch"](next);
+});
 
+//用户位置更新，客户端那边每2分钟以上才能定位一次，如果定位的新位置距离旧位置超过500米，则上传新位置到服务器
+router.post('/update_user_location', function (req, res, next) {
+    console.log("update_user_location");
+    var currentUserId = Session.getCurrentUserId(req);
+    var timestamp = Date.now();
+    return User.update({ //将结果更新到数据库
+        longitude: req.body.longitude,
+        latitude: req.body.latitude,
+        timestamp: timestamp
+    }, {
+        where: {
+            id: currentUserId
+        }
+    }).then(function () {
+        return res.send(new APIResult(200));
     })["catch"](next);
 });
 
@@ -1425,5 +1402,23 @@ router.get('/find/:region/:phone', function (req, res, next) {
         return res.send(new APIResult(200, Utility.encodeResults(user)));
     })["catch"](next);
 });
+
+function Rad(d) {
+    return d * Math.PI / 180.0;//经纬度转换成三角函数中度分表形式。
+}
+
+//计算距离，参数分别为第一点的纬度，经度；第二点的纬度，经度
+function GetDistance(lat1, lng1, lat2, lng2) {
+    var radLat1 = Rad(lat1);
+    var radLat2 = Rad(lat2);
+    var a = radLat1 - radLat2;
+    var b = Rad(lng1) - Rad(lng2);
+    var s = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(a / 2), 2) +
+        Math.cos(radLat1) * Math.cos(radLat2) * Math.pow(Math.sin(b / 2), 2)));
+    s = s * 6378.137;// EARTH_RADIUS;
+    s = Math.round(s * 10000) / 10000; //输出为公里
+    //s=s.toFixed(4);
+    return s;
+}
 
 module.exports = router;

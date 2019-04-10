@@ -326,7 +326,15 @@ User = sequelize.define('users', {
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: true
     },
-    location: {//位置信息
+    longitude: {//经度
+        type: Sequelize.DOUBLE,
+        allowNull: true
+    },
+    latitude: {//纬度
+        type: Sequelize.DOUBLE,
+        allowNull: true
+    },
+    location: {//位置信息，暂时用不到
         type: Sequelize.STRING(255),
         allowNull: true
     },
@@ -863,7 +871,7 @@ PayWeChatAndUserList.belongsTo(User, {
     constraints: true
 });
 
-// User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
+User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
     PayWeChatAndUserList];

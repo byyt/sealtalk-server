@@ -57,6 +57,8 @@ DbUtil.updateUserLocationById(5, 113.9749145508, 22.7255238111);
 DbUtil.updateUserLocationById(6, 113.9615249634, 22.6808661616);
 DbUtil.updateUserLocationById(7, 114.0590286255, 22.7840950725);
 DbUtil.updateUserLocationById(8, 114.1850280762, 22.8261875305);
+DbUtil.updateUserLocationById(9, 113.9158630371, 22.6121093004);
+DbUtil.updateUserLocationById(10, 113.9618682861, 22.6228845385);
 
 //单条数据插入免费图片表
 // DbUtil.insertFreeImgUrlById(3, '20.jpg');

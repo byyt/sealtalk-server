@@ -55,6 +55,8 @@ router = express.Router();
 
 validator = sequelize.Validator;
 
+//模糊查询用到的，注意安装新版，执行命令npm install sequelize@5.3.1
+//同时需要执行npm install --save mysql2，看官网https://github.com/demopark/sequelize-docs-Zh-CN/blob/master/getting-started.md
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 
@@ -532,7 +534,7 @@ router.get('/get_recommend_users1', function (req, res, next) {
         var userJsonArray = Utility.encodeResults(users); //用户json数组
         var currentUserId = Session.getCurrentUserId(req);
         //依次计算用户与请求用户之间的距离
-        return User.findById(currentUserId, {
+        return User.findByPk(currentUserId, {
             attributes: ['longitude', 'latitude']
         }).then(function (ordinaryUser) {
             if (!ordinaryUser) {
@@ -570,15 +572,16 @@ router.get('/get_recommend_users', function (req, res, next) {
     offset = startIndex * pageSize;
     console.log(offset);
 
-
     var currentUserId = Session.getCurrentUserId(req);
     //依次计算用户与请求用户之间的距离
-    return User.findById(currentUserId, {
+    return User.findByPk(currentUserId, {
         attributes: ['longitude', 'latitude', 'geohash']
     }).then(function (ordinaryUser) {
         if (!ordinaryUser) {
             return res.status(404).send('Unknown ordinary user.');
         }
+        var results = {}; //最终结果，包含了用户列表，分页号、分页大小之类
+        var userJsonArray = []; //用户列表
         var ordinaryResults = Utility.encodeResults(ordinaryUser);
         var ordinaryLongitude = ordinaryResults.longitude;
         var ordinaryLatitude = ordinaryResults.latitude;
@@ -586,10 +589,15 @@ router.get('/get_recommend_users', function (req, res, next) {
         console.log(ordinaryResults);
         //得到一个数组，ordinaryGeohash的8个邻居
         var neighbors = Geohash.neighbors(ordinaryGeohash);
-        neighbors.splice(0, 0, ordinaryGeohash);//将ordinaryGeohash插入数组第一个位置
+        //将ordinaryGeohash插入数组第一个位置，得到一个九个元素的数组
+        neighbors.splice(0, 0, ordinaryGeohash);
         console.log(neighbors);
         //依次对这9个geohash进行模糊查询，得到的点就是附近的人，最后再由近到远排序
+        //数据库查询是异步的，如果查完一个之后再进行下一个查询，不能直接在for循环里面调用9次查询，应该在么次查询完的then之后再调下一次查询
+        //如果不需要保证这多次查询的顺序，只需关心全部查询结束后，在做操作，则可以做个执行次数标记位，直接在for循环里面执行
+        var finishTimes = 0;
         for (i = 0; i < neighbors.length; i++) {
+            console.log(neighbors[i] + '%');
             User.findAll({
                 attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'geohash', 'freeImgList'],
                 where: {
@@ -599,51 +607,37 @@ router.get('/get_recommend_users', function (req, res, next) {
                     }
                 }
             }).then(function (users) {
+                finishTimes++;
                 var subResults = Utility.encodeResults(users);
-                console.log(subResults);
-            });
+                console.log(subResults.length);
+                //将子数组添加近最终的用户列表数组中
+                userJsonArray = userJsonArray.concat(subResults);
+                //最后一个查询结束，所有子数组都添加进来了
+                if (finishTimes === neighbors.length) {
+                    console.log("finish");
+                    console.log(userJsonArray.length);
+                    //依次计算用户与请求用户之间的距离，将字段distance字段加进去
+                    for (var i = 0, length = userJsonArray.length; i < length; i++) {
+                        userJsonArray[i].distance =
+                            GetDistance(userJsonArray[i].latitude, userJsonArray[i].longitude, ordinaryLatitude, ordinaryLongitude);//计算两点距离
+                    }
 
-            userJsonArray[i].distance =
-                GetDistance(userJsonArray[i].latitude, userJsonArray[i].longitude, ordinaryLatitude, ordinaryLongitude);//计算两点距离
+                    //依据距离distance字段由近到远进行排序
+                    function sortId(a, b) {
+                        return a.distance - b.distance
+                    }
+
+                    //排序
+                    userJsonArray.sort(sortId);
+
+                    results.data = userJsonArray;
+                    results.nextIndex = startIndex + 1;
+                    console.log(results);
+                    return res.send(new APIResult(200, results));
+                }
+            })["catch"](next);
         }
-
-        //依次计算用户与请求用户之间的距离，将字段distance加进去
-
-        console.log(results);
-        return res.send(new APIResult(200, results));
-    });
-
-    return User.findAll({
-        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'freeImgList'],
-        where: {}
-    }).then(function (users) {
-        var results = {};
-        //如果不填keys，encodeResult函数默认会对id加sequelize.sync()密
-        var userJsonArray = Utility.encodeResults(users); //用户json数组
-        var currentUserId = Session.getCurrentUserId(req);
-        //依次计算用户与请求用户之间的距离
-        return User.findById(currentUserId, {
-            attributes: ['longitude', 'latitude']
-        }).then(function (ordinaryUser) {
-            if (!ordinaryUser) {
-                return res.status(404).send('Unknown ordinary user.');
-            }
-            var ordinaryResults = Utility.encodeResults(ordinaryUser);
-            var ordinaryLongitude = ordinaryResults.longitude;
-            var ordinaryLatitude = ordinaryResults.latitude;
-            console.log(ordinaryResults);
-            //依次计算用户与请求用户之间的距离，将字段distance加进去
-            for (var i = 0, length = userJsonArray.length; i < length; i++) {
-                userJsonArray[i].distance =
-                    GetDistance(userJsonArray[i].latitude, userJsonArray[i].longitude, ordinaryLatitude, ordinaryLongitude);//计算两点距离
-            }
-            results.data = userJsonArray;
-            results.nextIndex = startIndex + 1;
-            console.log(results);
-            return res.send(new APIResult(200, results));
-        });
-
-    })["catch"](next);//后面这个["catch"](next);不要忘记加
+    })["catch"](next);
 
 });
 

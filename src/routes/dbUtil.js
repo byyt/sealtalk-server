@@ -40,7 +40,8 @@ DbUtil = (function () {
     function DbUtil() {
     }
 
-    DbUtil.local_host = "http://192.168.0.101:8081/";
+    // DbUtil.local_host = "http://192.168.0.101:8081/";
+    //前缀即域名不要再保存到数据库里了，只保存路径，即fid，如1.jpg或者/upload/1.jpg
 
     /**
      * 更新个人信息
@@ -133,7 +134,7 @@ DbUtil = (function () {
     //但是freeImgList是字符串类型的json数组，不能同时对同一用户进行多个操作
     //应该把这多个操作先转成一个字符串数组，在进行一次性插入修改
     DbUtil.insertFreeImgUrlById = function (id, imgUrlArray) {
-        return User.findById(id, {
+        return User.findByPk(id, {
             attributes: ['freeImgList']
         }).then(function (user) {
             var results = Utility.encodeResults(user); //将数据库数据转成json，是个json数组
@@ -148,7 +149,7 @@ DbUtil = (function () {
             var jsonArray = JSON.parse(jsonArrayStr); //将字符串转成json数组
             for (var i = 0; i < imgUrlArray.length; i++) {
                 var json = {}; //定义一个json对象
-                json.imgUrl = DbUtil.local_host + imgUrlArray[i]; //给json对象的imgUrl字段存入http://192.168.0.101:8081/0003.jpg
+                json.imgUrl = imgUrlArray[i]; //给json对象的imgUrl字段存入http://192.168.0.101:8081/0003.jpg
                 jsonArray.push(json); //将该json加入到jsonArray的json数组里
             }
             var resultStr = JSON.stringify(jsonArray); //将json数组转成字符串

@@ -52,13 +52,13 @@ var DbUtil = require('./dbUtil');
 // DbUtil.updateUserInfoById(11, '小绿同学11', 1, 180, 18, 99, 6, 20, 120, '三大发生的发生发束腹带当时的发生地方');
 
 //根据userId更新用户经纬度还有geohash
-DbUtil.updateUserLocationById(4, 113.9323425293, 22.7426228824);
-DbUtil.updateUserLocationById(5, 113.9749145508, 22.7255238111);
-DbUtil.updateUserLocationById(6, 113.9615249634, 22.6808661616);
-DbUtil.updateUserLocationById(7, 114.0590286255, 22.7840950725);
-DbUtil.updateUserLocationById(8, 114.1850280762, 22.8261875305);
-DbUtil.updateUserLocationById(9, 113.9158630371, 22.6121093004);
-DbUtil.updateUserLocationById(10, 113.9618682861, 22.6228845385);
+// DbUtil.updateUserLocationById(4, 113.9323425293, 22.7426228824);
+// DbUtil.updateUserLocationById(5, 113.9749145508, 22.7255238111);
+// DbUtil.updateUserLocationById(6, 113.9615249634, 22.6808661616);
+// DbUtil.updateUserLocationById(7, 114.0590286255, 22.7840950725);
+// DbUtil.updateUserLocationById(8, 114.1850280762, 22.8261875305);
+// DbUtil.updateUserLocationById(9, 113.9158630371, 22.6121093004);
+// DbUtil.updateUserLocationById(10, 113.9618682861, 22.6228845385);
 
 //单条数据插入免费图片表
 // DbUtil.insertFreeImgUrlById(3, '20.jpg');
@@ -67,19 +67,19 @@ DbUtil.updateUserLocationById(10, 113.9618682861, 22.6228845385);
 // DbUtil.insertFreeImgUrlById(6, '41.jpg');
 
 //单条数据删除免费图片
-// DbUtil.deleteFreeImgUrlById(5, 'renwu6.jpg');
+// DbUtil.deleteFreeImgUrlById(3, 'renwu6.jpg');
 
 //批量插入免费图片表
 //其实不是进行多次插入单个图片，而是先把多个图片存为一个字符串数组，然后对用户进行性一次插入
-// DbUtil.batchInsertFreeImgUrlById(3, 20, 28);
-// DbUtil.batchInsertFreeImgUrlById(4, 29, 34);
-// DbUtil.batchInsertFreeImgUrlById(5, 35, 40);
-// DbUtil.batchInsertFreeImgUrlById(6, 41, 46);
-// DbUtil.batchInsertFreeImgUrlById(7, 47, 52);
-// DbUtil.batchInsertFreeImgUrlById(8, 53, 60);
-// DbUtil.batchInsertFreeImgUrlById(9, 1, 6);
-// DbUtil.batchInsertFreeImgUrlById(10, 7, 12);
-// DbUtil.batchInsertFreeImgUrlById(11, 12, 16);
+DbUtil.batchInsertFreeImgUrlById(3, 20, 28);
+DbUtil.batchInsertFreeImgUrlById(4, 29, 34);
+DbUtil.batchInsertFreeImgUrlById(5, 35, 40);
+DbUtil.batchInsertFreeImgUrlById(6, 41, 46);
+DbUtil.batchInsertFreeImgUrlById(7, 47, 52);
+DbUtil.batchInsertFreeImgUrlById(8, 53, 60);
+DbUtil.batchInsertFreeImgUrlById(9, 1, 6);
+DbUtil.batchInsertFreeImgUrlById(10, 7, 12);
+DbUtil.batchInsertFreeImgUrlById(11, 12, 16);
 
 //清空免费图片列表,
 //注意，下面是一个很重要的问题，同时打开下面的语句，并发执行update，会执行失败，以后必须改正这个问题

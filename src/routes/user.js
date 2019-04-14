@@ -496,8 +496,8 @@ router.post('/login', function (req, res, next) {
     })["catch"](next);
 });
 
-//首页获取推荐用户信息列表
-router.get('/get_recommend_users1', function (req, res, next) {
+//首页--猜你喜欢，用户信息列表
+router.get('/get_recommend_users', function (req, res, next) {
     // return User.findAll({
     //     where: {},
     //     attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'freeImgList']
@@ -559,9 +559,8 @@ router.get('/get_recommend_users1', function (req, res, next) {
 
 });
 
-//首页获取附近用户信息列表
-// router.get('/get_nearby_users', function (req, res, next) {
-router.get('/get_recommend_users', function (req, res, next) {
+//首页--距离最近，用户信息列表
+router.get('/get_nearby_users', function (req, res, next) {
     var startIndex, pageSize, offset, i;
     startIndex = req.query.startIndex;
     pageSize = req.query.pageSize;
@@ -623,14 +622,21 @@ router.get('/get_recommend_users', function (req, res, next) {
                     }
 
                     //依据距离distance字段由近到远进行排序
-                    function sortId(a, b) {
+                    function sortDistance(a, b) {
                         return a.distance - b.distance
                     }
 
                     //排序
-                    userJsonArray.sort(sortId);
+                    userJsonArray.sort(sortDistance);
 
-                    results.data = userJsonArray;
+                    //客户端分页拉取，只返回部分数据
+                    //既不能超越结果的最大下标，也不能超过每页的大小
+                    var subUserJsonArray = [];
+                    for (var j = offset, k = 0, len = userJsonArray.length; j < len && k < pageSize; j++, k++) {
+                        subUserJsonArray.push(userJsonArray[j]);
+                    }
+
+                    results.data = subUserJsonArray;
                     results.nextIndex = startIndex + 1;
                     console.log(results);
                     return res.send(new APIResult(200, results));
@@ -638,6 +644,54 @@ router.get('/get_recommend_users', function (req, res, next) {
             })["catch"](next);
         }
     })["catch"](next);
+
+});
+
+//首页--好评优先，用户信息列表
+router.get('/get_rate_users', function (req, res, next) {
+    var startIndex, pageSize, offset;
+    startIndex = req.query.startIndex;
+    pageSize = req.query.pageSize;
+    startIndex = parseInt(startIndex); //转成整数，否则出错
+    pageSize = parseInt(pageSize);
+    console.log(startIndex);
+    console.log(pageSize);
+    offset = startIndex * pageSize;
+    console.log(offset);
+
+    return User.findAll({
+        where: {},//后边一定要加条件，其实排前面的，只需那些活跃的用户即可，不然整体用户排序太耗性能
+        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'feedback_rate', 'freeImgList']
+    }).then(function (users) {
+        var results = {};
+        var userJsonArray = Utility.encodeResults(users);
+
+        //依据好评率由高到低排序
+        function sortRate(a, b) {
+            return b.feedback_rate - a.feedback_rate
+        }
+
+        //排序
+        userJsonArray.sort(sortRate);
+
+        //客户端分页拉取，只返回部分数据
+        //既不能超越结果的最大下标，也不能超过每页的大小
+        var subUserJsonArray = [];
+        for (var j = offset, k = 0, len = userJsonArray.length; j < len && k < pageSize; j++, k++) {
+            subUserJsonArray.push(userJsonArray[j]);
+        }
+
+        results.data = subUserJsonArray;
+        results.nextIndex = startIndex + 1;
+
+        console.log(results);
+
+        //打乱顺序，测试用，客户端每次刷新数据，得到结果不一样
+        // results = results.sort(function () {
+        //     return 0.5 - Math.random()
+        // });
+        return res.send(new APIResult(200, results));
+    })["catch"](next);//后面这个["catch"](next);不要忘记加
 
 });
 
@@ -666,7 +720,7 @@ router.get('/get_user_detail_one', function (req, res, next) {
     // })["catch"](next);
 
     //下面是先不用缓存的，以便修改数据库数据时能及时返回给客户端，上线时加上缓存
-    return User.findById(userId, {
+    return User.findByPk(userId, {
         attributes: ['id', 'nickname', 'sex', 'portraitUri', 'height', 'birthday', 'longitude', 'latitude', 'suoZaiDi',
             'feedback_rate', 'followNum', 'fansNum', 'qianMing', 'xqah', 'freeImgList', 'skills']
     }).then(function (user) {
@@ -679,7 +733,7 @@ router.get('/get_user_detail_one', function (req, res, next) {
         var targetLatitude = results.latitude;
         console.log(targetLongitude);
         console.log(targetLatitude);
-        return User.findById(currentUserId, {
+        return User.findByPk(currentUserId, {
             attributes: ['longitude', 'latitude']
         }).then(function (ordinaryUser) {
             if (!ordinaryUser) {
@@ -702,7 +756,7 @@ router.get('/get_user_detail_two', function (req, res, next) {
     var userId;
     userId = req.query.id;
     userId = Utility.decodeIds(userId); //先对userId解码，传过来的是一个字符串
-    return User.findById(userId, {
+    return User.findByPk(userId, {
         attributes: ['id', 'weChat', 'weChatPrice']
     }).then(function (user) {
         if (!user) {
@@ -1474,7 +1528,7 @@ router.get('/:id', function (req, res, next) {
         if (user) {
             return res.send(new APIResult(200, user));
         } else {
-            return User.findById(userId, {
+            return User.findByPk(userId, {
                 attributes: ['id', 'nickname', 'portraitUri']
             }).then(function (user) {
                 var results;

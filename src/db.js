@@ -252,25 +252,6 @@ dataVersionClassMethods = {
     }
 };
 
-verificationCodeClassMethods = {
-    getByToken: function (token) {
-        return VerificationCode.findOne({
-            where: {
-                token: token
-            },
-            attributes: ['region', 'phone']
-        });
-    },
-    getByPhone: function (region, phone) {
-        return VerificationCode.findOne({
-            where: {
-                region: region,
-                phone: phone
-            },
-            attributes: ['sessionId', 'token', 'updatedAt']
-        });
-    }
-};
 
 //用户数据表的创建，后边数据表结构的修改，先在mysql编辑工具navicat中进行修改，然后再在代码中进行对应修改
 User = sequelize.define('users', {
@@ -313,7 +294,7 @@ User = sequelize.define('users', {
         defaultValue: 0
     },
     birthday: {//出生日期，时间戳
-        type: Sequelize.INTEGER,
+        type: Sequelize.BIGINT,
         allowNull: false,
         defaultValue: 0
     },
@@ -714,7 +695,6 @@ VerificationCode = sequelize.define('verification_codes', {
         unique: true
     }
 }, {
-    classMethods: verificationCodeClassMethods,
     indexes: [
         {
             unique: true,
@@ -874,6 +854,27 @@ PayWeChatAndUserList.belongsTo(User, {
     foreignKey: 'userId',
     constraints: true
 });
+
+//类的方法不能再像以前那样写了classMethods: verificationCodeClassMethods，而是像下面这样
+VerificationCode.getByToken = function (token) {
+    return VerificationCode.findOne({
+        where: {
+            token: token
+        },
+        attributes: ['region', 'phone']
+    });
+};
+
+VerificationCode.getByPhone = function (region, phone) {
+    return VerificationCode.findOne({
+        where: {
+            region: region,
+            phone: phone
+        },
+        attributes: ['sessionId', 'token', 'updatedAt']
+    });
+};
+
 
 // User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 

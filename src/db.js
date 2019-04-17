@@ -298,6 +298,11 @@ User = sequelize.define('users', {
         allowNull: false,
         defaultValue: 0
     },
+    age: {//年龄
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0
+    },
     freeImgList: {//新添字段免费图片列表，json数组的字符串
         type: Sequelize.TEXT,
         allowNull: true
@@ -876,7 +881,7 @@ VerificationCode.getByPhone = function (region, phone) {
 };
 
 
-// User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
+User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
     PayWeChatAndUserList];

@@ -518,16 +518,41 @@ router.get('/get_recommend_users', function (req, res, next) {
     pageSize = req.query.pageSize;
     startIndex = parseInt(startIndex); //转成整数，否则出错
     pageSize = parseInt(pageSize);
-    console.log(startIndex);
-    console.log(pageSize);
+    // console.log(startIndex);
+    // console.log(pageSize);
     offset = startIndex * pageSize;
-    console.log(offset);
+    // console.log(offset);
+
+    //可以动态设置筛选条件
+    var shaixuan = {};
+    var fromAge = req.query.fromAge;
+    var toAge = req.query.toAge;
+    var fromHeight = req.query.fromHeight;
+    var toHeight = req.query.toHeight;
+    // console.log(fromAge);
+    // console.log(toAge);
+    // console.log(fromHeight);
+    // console.log(toHeight);
+    if (fromAge !== "" && fromAge !== null && fromAge !== undefined
+        && toAge !== "" && toAge !== null && toAge !== undefined) {
+        shaixuan.age = {
+            [Op.between]: [fromAge, toAge]//范围筛选
+        };
+    }
+    if (fromHeight !== "" && fromHeight !== null && fromHeight !== undefined
+        && toHeight !== "" && toHeight !== null && toHeight !== undefined) {
+        shaixuan.height = {
+            [Op.between]: [fromHeight, toHeight]//范围筛选
+        };
+    }
+    // console.log(shaixuan);
+
 
     return User.findAll({
-        where: {},
         offset: offset,
         limit: pageSize,
-        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'freeImgList']
+        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'freeImgList'],
+        where: shaixuan
     }).then(function (users) {
         var results = {};
         //如果不填keys，encodeResult函数默认会对id加sequelize.sync()密
@@ -551,7 +576,7 @@ router.get('/get_recommend_users', function (req, res, next) {
             }
             results.data = userJsonArray;
             results.nextIndex = startIndex + 1;
-            console.log(results);
+            // console.log(results);
             return res.send(new APIResult(200, results));
         });
 
@@ -566,10 +591,30 @@ router.get('/get_nearby_users', function (req, res, next) {
     pageSize = req.query.pageSize;
     startIndex = parseInt(startIndex); //转成整数，否则出错
     pageSize = parseInt(pageSize);
-    console.log(startIndex);
-    console.log(pageSize);
+    // console.log(startIndex);
+    // console.log(pageSize);
     offset = startIndex * pageSize;
-    console.log(offset);
+    // console.log(offset);
+
+    //可以动态设置筛选条件，性别，年龄，身高
+    var shaixuan = {};
+    var fromAge = req.query.fromAge;
+    var toAge = req.query.toAge;
+    var fromHeight = req.query.fromHeight;
+    var toHeight = req.query.toHeight;
+    if (fromAge !== "" && fromAge !== null && fromAge !== undefined
+        && toAge !== "" && toAge !== null && toAge !== undefined) {
+        shaixuan.age = {
+            [Op.between]: [fromAge, toAge]//范围筛选
+        };
+    }
+    if (fromHeight !== "" && fromHeight !== null && fromHeight !== undefined
+        && toHeight !== "" && toHeight !== null && toHeight !== undefined) {
+        shaixuan.height = {
+            [Op.between]: [fromHeight, toHeight]//范围筛选
+        };
+    }
+    // console.log(shaixuan);
 
     var currentUserId = Session.getCurrentUserId(req);
     //依次计算用户与请求用户之间的距离
@@ -597,18 +642,19 @@ router.get('/get_nearby_users', function (req, res, next) {
         var finishTimes = 0;
         for (i = 0; i < neighbors.length; i++) {
             console.log(neighbors[i] + '%');
+            //除了性别、年龄、身高筛选条件，再加上geohash模糊查询
+            shaixuan.geohash = {
+                // 模糊查询
+                [Op.like]: neighbors[i] + '%'
+            };
+            console.log(shaixuan);
             User.findAll({
                 attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'geohash', 'freeImgList'],
-                where: {
-                    geohash: {
-                        // 模糊查询
-                        [Op.like]: neighbors[i] + '%'
-                    }
-                }
+                where: shaixuan
             }).then(function (users) {
                 finishTimes++;
                 var subResults = Utility.encodeResults(users);
-                console.log(subResults.length);
+                // console.log(subResults.length);
                 //将子数组添加近最终的用户列表数组中
                 userJsonArray = userJsonArray.concat(subResults);
                 //最后一个查询结束，所有子数组都添加进来了
@@ -638,7 +684,7 @@ router.get('/get_nearby_users', function (req, res, next) {
 
                     results.data = subUserJsonArray;
                     results.nextIndex = startIndex + 1;
-                    console.log(results);
+                    // console.log(results);
                     return res.send(new APIResult(200, results));
                 }
             })["catch"](next);
@@ -654,14 +700,34 @@ router.get('/get_rate_users', function (req, res, next) {
     pageSize = req.query.pageSize;
     startIndex = parseInt(startIndex); //转成整数，否则出错
     pageSize = parseInt(pageSize);
-    console.log(startIndex);
-    console.log(pageSize);
+    // console.log(startIndex);
+    // console.log(pageSize);
     offset = startIndex * pageSize;
-    console.log(offset);
+    // console.log(offset);
+
+    //可以动态设置筛选条件，性别，年龄，身高
+    var shaixuan = {};
+    var fromAge = req.query.fromAge;
+    var toAge = req.query.toAge;
+    var fromHeight = req.query.fromHeight;
+    var toHeight = req.query.toHeight;
+    if (fromAge !== "" && fromAge !== null && fromAge !== undefined
+        && toAge !== "" && toAge !== null && toAge !== undefined) {
+        shaixuan.age = {
+            [Op.between]: [fromAge, toAge]//范围筛选
+        };
+    }
+    if (fromHeight !== "" && fromHeight !== null && fromHeight !== undefined
+        && toHeight !== "" && toHeight !== null && toHeight !== undefined) {
+        shaixuan.height = {
+            [Op.between]: [fromHeight, toHeight]//范围筛选
+        };
+    }
+    // console.log(shaixuan);
 
     return User.findAll({
-        where: {},//后边一定要加条件，其实排前面的，只需那些活跃的用户即可，不然整体用户排序太耗性能
-        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'feedback_rate', 'freeImgList']
+        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'feedback_rate', 'freeImgList'],
+        where: shaixuan //后边一定要加条件，其实排前面的，只需那些活跃的用户即可，不然整体用户排序太耗性能
     }).then(function (users) {
         var results = {};
         var userJsonArray = Utility.encodeResults(users);
@@ -721,7 +787,7 @@ router.get('/get_user_detail_one', function (req, res, next) {
 
     //下面是先不用缓存的，以便修改数据库数据时能及时返回给客户端，上线时加上缓存
     return User.findByPk(userId, {
-        attributes: ['id', 'nickname', 'sex', 'portraitUri', 'height', 'birthday', 'longitude', 'latitude', 'suoZaiDi',
+        attributes: ['id', 'nickname', 'sex', 'portraitUri', 'height', 'birthday', 'age', 'longitude', 'latitude', 'suoZaiDi',
             'feedback_rate', 'followNum', 'fansNum', 'qianMing', 'xqah', 'freeImgList', 'skills']
     }).then(function (user) {
         if (!user) {
@@ -915,6 +981,7 @@ router.post('/update_user_info', function (req, res, next) {
         sex: req.body.sex,
         height: req.body.height,
         birthday: req.body.birthday,
+        age: req.body.age,
         suoZaiDi: req.body.suoZaiDi,
         qianMing: req.body.qianMing,
         xqah: req.body.xqah,

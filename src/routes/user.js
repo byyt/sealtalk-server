@@ -525,14 +525,19 @@ router.get('/get_recommend_users', function (req, res, next) {
 
     //可以动态设置筛选条件
     var shaixuan = {};
+    var xbSelected = req.query.xbSelected;
     var fromAge = req.query.fromAge;
     var toAge = req.query.toAge;
     var fromHeight = req.query.fromHeight;
     var toHeight = req.query.toHeight;
+    // console.log(xbSelected);
     // console.log(fromAge);
     // console.log(toAge);
     // console.log(fromHeight);
     // console.log(toHeight);
+    if (xbSelected !== "" && xbSelected !== null && xbSelected !== undefined) {
+        shaixuan.sex = xbSelected;//性别筛选
+    }
     if (fromAge !== "" && fromAge !== null && fromAge !== undefined
         && toAge !== "" && toAge !== null && toAge !== undefined) {
         shaixuan.age = {
@@ -545,13 +550,13 @@ router.get('/get_recommend_users', function (req, res, next) {
             [Op.between]: [fromHeight, toHeight]//范围筛选
         };
     }
-    // console.log(shaixuan);
+    console.log(shaixuan);
 
 
     return User.findAll({
         offset: offset,
         limit: pageSize,
-        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'freeImgList'],
+        attributes: ['id', 'nickname', 'portraitUri', 'sex', 'age', 'longitude', 'latitude', 'freeImgList'],
         where: shaixuan
     }).then(function (users) {
         var results = {};
@@ -568,7 +573,7 @@ router.get('/get_recommend_users', function (req, res, next) {
             var ordinaryResults = Utility.encodeResults(ordinaryUser);
             var ordinaryLongitude = ordinaryResults.longitude;
             var ordinaryLatitude = ordinaryResults.latitude;
-            console.log(ordinaryResults);
+            // console.log(ordinaryResults);
             //依次计算用户与请求用户之间的距离，将字段distance加进去
             for (var i = 0, length = userJsonArray.length; i < length; i++) {
                 userJsonArray[i].distance =
@@ -598,20 +603,24 @@ router.get('/get_nearby_users', function (req, res, next) {
 
     //可以动态设置筛选条件，性别，年龄，身高
     var shaixuan = {};
+    var xbSelected = req.query.xbSelected;
     var fromAge = req.query.fromAge;
     var toAge = req.query.toAge;
     var fromHeight = req.query.fromHeight;
     var toHeight = req.query.toHeight;
+    if (xbSelected !== "" && xbSelected !== null && xbSelected !== undefined) {
+        shaixuan.sex = xbSelected;//性别筛选
+    }
     if (fromAge !== "" && fromAge !== null && fromAge !== undefined
         && toAge !== "" && toAge !== null && toAge !== undefined) {
         shaixuan.age = {
-            [Op.between]: [fromAge, toAge]//范围筛选
+            [Op.between]: [fromAge, toAge]//年龄范围筛选
         };
     }
     if (fromHeight !== "" && fromHeight !== null && fromHeight !== undefined
         && toHeight !== "" && toHeight !== null && toHeight !== undefined) {
         shaixuan.height = {
-            [Op.between]: [fromHeight, toHeight]//范围筛选
+            [Op.between]: [fromHeight, toHeight]//身高范围筛选
         };
     }
     // console.log(shaixuan);
@@ -649,7 +658,7 @@ router.get('/get_nearby_users', function (req, res, next) {
             };
             console.log(shaixuan);
             User.findAll({
-                attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'longitude', 'latitude', 'geohash', 'freeImgList'],
+                attributes: ['id', 'nickname', 'portraitUri', 'sex', 'age', 'longitude', 'latitude', 'geohash', 'freeImgList'],
                 where: shaixuan
             }).then(function (users) {
                 finishTimes++;
@@ -707,10 +716,14 @@ router.get('/get_rate_users', function (req, res, next) {
 
     //可以动态设置筛选条件，性别，年龄，身高
     var shaixuan = {};
+    var xbSelected = req.query.xbSelected;
     var fromAge = req.query.fromAge;
     var toAge = req.query.toAge;
     var fromHeight = req.query.fromHeight;
     var toHeight = req.query.toHeight;
+    if (xbSelected !== "" && xbSelected !== null && xbSelected !== undefined) {
+        shaixuan.sex = xbSelected;//性别筛选
+    }
     if (fromAge !== "" && fromAge !== null && fromAge !== undefined
         && toAge !== "" && toAge !== null && toAge !== undefined) {
         shaixuan.age = {
@@ -726,7 +739,7 @@ router.get('/get_rate_users', function (req, res, next) {
     // console.log(shaixuan);
 
     return User.findAll({
-        attributes: ['id', 'nickname', 'region', 'phone', 'portraitUri', 'feedback_rate', 'freeImgList'],
+        attributes: ['id', 'nickname', 'portraitUri', 'sex', 'age', 'longitude', 'latitude', 'feedback_rate','freeImgList'],
         where: shaixuan //后边一定要加条件，其实排前面的，只需那些活跃的用户即可，不然整体用户排序太耗性能
     }).then(function (users) {
         var results = {};

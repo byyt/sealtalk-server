@@ -3,7 +3,7 @@ var Blacklist, Config, DataVersion, Friendship, GROUP_CREATOR, GROUP_MEMBER, Gro
     groupClassMethods,
     groupMemberClassMethods, sequelize, userClassMethods, verificationCodeClassMethods,
     PayImgList, PayImgAndUserList, payImgListClassMethods, payImgAndUserListClassMethods,
-    PayWeChatAndUserList;
+    PayWeChatAndUserList, Order;
 
 Sequelize = require('sequelize');
 
@@ -747,6 +747,9 @@ LoginLog = sequelize.define('login_logs', {
     updatedAt: false
 });
 
+//订单表
+
+
 //下面是新建的付费图片表
 PayImgList = sequelize.define('pay_imgs', {
     id: {
@@ -860,6 +863,44 @@ PayWeChatAndUserList.belongsTo(User, {
     constraints: true
 });
 
+//交易记录表，给用户查看的，也可以看到我的收入
+Order = sequelize.define('orders', {
+    id: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    payUserId: { //付款方用户id
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false
+    },
+    receiveUserId: { //收款方用户id
+        type: Sequelize.STRING(64),
+        allowNull: false,
+        defaultValue: ''
+    },
+    amount: { //付款金额
+        type: Sequelize.DOUBLE.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0
+    },
+    //应该还有交易类型，比如充值，约人付费，查看微信，查看图片，
+    timestamp: {//时间戳
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        comment: '时间戳（版本号）'
+    }
+}, {
+    indexes: [
+        {
+            fields: ['payUserId']
+        }, {
+            fields: ['receiveUserId']
+        }
+    ]
+});
+
 //类的方法不能再像以前那样写了classMethods: verificationCodeClassMethods，而是像下面这样
 VerificationCode.getByToken = function (token) {
     return VerificationCode.findOne({
@@ -880,11 +921,12 @@ VerificationCode.getByPhone = function (region, phone) {
     });
 };
 
+//分割线，下面是新建表或者给表新建字段用的
 
 User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
-    PayWeChatAndUserList];
+    PayWeChatAndUserList, Order];
 
 
 // //下面时新建表的例子，

@@ -71,15 +71,15 @@ var DbUtil = require('./dbUtil');
 
 //批量插入免费图片表
 //其实不是进行多次插入单个图片，而是先把多个图片存为一个字符串数组，然后对用户进行性一次插入
-DbUtil.batchInsertFreeImgUrlById(3, 20, 28);
-DbUtil.batchInsertFreeImgUrlById(4, 29, 34);
-DbUtil.batchInsertFreeImgUrlById(5, 35, 40);
-DbUtil.batchInsertFreeImgUrlById(6, 41, 46);
-DbUtil.batchInsertFreeImgUrlById(7, 47, 52);
-DbUtil.batchInsertFreeImgUrlById(8, 53, 60);
-DbUtil.batchInsertFreeImgUrlById(9, 1, 6);
-DbUtil.batchInsertFreeImgUrlById(10, 7, 12);
-DbUtil.batchInsertFreeImgUrlById(11, 12, 16);
+// DbUtil.batchInsertFreeImgUrlById(3, 20, 28);
+// DbUtil.batchInsertFreeImgUrlById(4, 29, 34);
+// DbUtil.batchInsertFreeImgUrlById(5, 35, 40);
+// DbUtil.batchInsertFreeImgUrlById(6, 41, 46);
+// DbUtil.batchInsertFreeImgUrlById(7, 47, 52);
+// DbUtil.batchInsertFreeImgUrlById(8, 53, 60);
+// DbUtil.batchInsertFreeImgUrlById(9, 1, 6);
+// DbUtil.batchInsertFreeImgUrlById(10, 7, 12);
+// DbUtil.batchInsertFreeImgUrlById(11, 12, 16);
 
 //清空免费图片列表,
 //注意，下面是一个很重要的问题，同时打开下面的语句，并发执行update，会执行失败，以后必须改正这个问题
@@ -133,10 +133,15 @@ DbUtil.batchInsertFreeImgUrlById(11, 12, 16);
 // DbUtil.clearPayWeChatAndUserListById(3);
 
 //更新用户的技能信息
-// DbUtil.updateUserSkillsByUserId(3, "{\"吃饭\":\"298元／小时\",\"健身\":\"198元／小时\"}")
-// DbUtil.updateUserSkillsByUserId(4, "{\"跑步\":\"298元／小时\"}")
-// DbUtil.updateUserSkillsByUserId(5, "{\"跑步\":\"290元／小时\",\"健身\":\"298元／小时\",\"吃饭\":\"398元／小时\",\"看电影\":\"300元／小时\"}")
-// DbUtil.updateUserSkillsByUserId(6, "{\"跑步\":\"200元／小时\",\"健身\":\"198元／小时\"}")
-// DbUtil.updateUserSkillsByUserId(7, "{\"跑步\":\"390元／小时\",\"健身\":\"892元／小时\",\"吃饭\":\"398元／小时\",\"看电影\":\"500元／小时\"}")
-// DbUtil.updateUserSkillsByUserId(8, "{\"跑步\":\"295元／小时\",\"健身\":\"298元／小时\",\"吃饭\":\"498元／小时\",\"看电影\":\"320元／小时\"}")
+DbUtil.updateUserSkillsByUserId(3, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"288\",\"desc\":\"跑步有益健康\"}," +
+    "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"268\",\"desc\":\"健身有益健康\"}," +
+    "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"298\",\"desc\":\"吃饭挺好\"}]");
+DbUtil.updateUserSkillsByUserId(4, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"282\",\"desc\":\"跑步有益健康\"}," +
+    "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"280\",\"desc\":\"健身有益健康\"}," +
+    "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"288\",\"desc\":\"吃饭挺好\"}," +
+    "{\"type\":\"4\",\"name\":\"看电影\",\"price\":\"388\",\"desc\":\"看电影不错阿\"}]");
 
+//单条数据插入交易记录表
+// for (var i = 0; i < 10000; i++) {
+//     DbUtil.insertOrder(3,6,300);
+// }

@@ -1,5 +1,5 @@
 var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMember, GroupSync, LoginLog, PayImgList,
-    PayImgAndUserList, PayWeChatAndUserList,
+    PayImgAndUserList, PayWeChatAndUserList, Order,
     MAX_GROUP_MEMBER_COUNT, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH,
     PORTRAIT_URI_MAX_LENGTH, PORTRAIT_URI_MIN_LENGTH, Session, User, Utility, VerificationCode, _, co, express,
     getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator,
@@ -33,7 +33,7 @@ Geohash = require('ngeohash');
 
 ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
     GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
-    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12];
+    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12], Order = ref[13];
 
 MAX_GROUP_MEMBER_COUNT = 500;
 
@@ -739,7 +739,7 @@ router.get('/get_rate_users', function (req, res, next) {
     // console.log(shaixuan);
 
     return User.findAll({
-        attributes: ['id', 'nickname', 'portraitUri', 'sex', 'age', 'longitude', 'latitude', 'feedback_rate','freeImgList'],
+        attributes: ['id', 'nickname', 'portraitUri', 'sex', 'age', 'longitude', 'latitude', 'feedback_rate', 'freeImgList'],
         where: shaixuan //后边一定要加条件，其实排前面的，只需那些活跃的用户即可，不然整体用户排序太耗性能
     }).then(function (users) {
         var results = {};

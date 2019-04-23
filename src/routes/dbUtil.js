@@ -1,5 +1,5 @@
 var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMember, GroupSync, LoginLog, PayImgList,
-    PayImgAndUserList, PayWeChatAndUserList,
+    PayImgAndUserList, PayWeChatAndUserList, Order,
     Session, User, Utility, VerificationCode, _, co, express,
     moment, qiniu, ref, rongCloud, router, sequelize, validator, Geohash;
 
@@ -29,7 +29,7 @@ Geohash = require('ngeohash');
 
 ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
     GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
-    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12];
+    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12], Order = ref[13];
 
 router = express.Router();
 
@@ -470,6 +470,20 @@ DbUtil = (function () {
                 id: userId
             }
         }).then(function () {
+
+        });
+    };
+
+    //插入单条订单数据，对应操作：xx用户对xx用户付费
+    DbUtil.insertOrder = function (payUserId, receiveUserId, amount) {
+        //把时间戳也记录进去
+        var timestamp = Date.now();
+        return Order.create({
+            payUserId: payUserId,
+            receiveUserId: receiveUserId,
+            amount: amount,
+            timestamp: timestamp
+        }).then(function (OrderList) {
 
         });
     };

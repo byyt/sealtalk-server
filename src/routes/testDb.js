@@ -40,18 +40,19 @@ var DbUtil = require('./dbUtil');
  */
 
 //根据userId更新用户资料
-//userId, nickname, sex, height, age, feedback_rate, location, followNum, fansNum, qianMing
-// DbUtil.updateUserInfoById(3, '小明同学3', 1, 175, 28, 98, 2, 50, 198, '签名啊啊啊啊啊三三三三三三');
-// DbUtil.updateUserInfoById(4, '小明同学4', 0, 172, 26, 95, 4, 35, 138, '签名啊啊啊啊啊四四四四四四');
-// DbUtil.updateUserInfoById(5, '小明同学5', 1, 173, 27, 96, 6, 15, 128, '签名啊啊啊啊啊呜呜呜呜呜呜');
-// DbUtil.updateUserInfoById(6, '小明同学6', 1, 178, 28, 98, 4, 25, 188, '签名啊啊啊啊啊六六六六六六');
-// DbUtil.updateUserInfoById(7, '小明同学7', 0, 165, 29, 94, 5, 35, 288, '哎哎哎哎哎啊哎哎哎');
-// DbUtil.updateUserInfoById(8, '小明同学8', 1, 170, 30, 96, 2, 28, 98, '撒付费电视打发发生地方');
-// DbUtil.updateUserInfoById(9, '小红同学9', 0, 172, 36, 97, 8, 55, 100, '山东发生的发生地方撒的发束腹带阿斯顿发');
-// DbUtil.updateUserInfoById(10, '小蓝同学10', 0, 188, 22, 95, 5, 65, 130, '阿斯顿发生的发生的发生的发生的发发');
-// DbUtil.updateUserInfoById(11, '小绿同学11', 1, 180, 18, 99, 6, 20, 120, '三大发生的发生发束腹带当时的发生地方');
+//userId, nickname, portraitUri, sex, height, age, feedback_rate, location, followNum, fansNum, qianMing
+// DbUtil.updateUserInfoById(3, '小明同学3', '6.jpg',1, 175, 28, 98, 2, 50, 198, '签名啊啊啊啊啊三三三三三三');
+// DbUtil.updateUserInfoById(4, '小明同学4', '16.jpg',0, 172, 26, 95, 4, 35, 138, '签名啊啊啊啊啊四四四四四四');
+// DbUtil.updateUserInfoById(5, '小明同学5', '26.jpg',1, 173, 27, 96, 6, 15, 128, '签名啊啊啊啊啊呜呜呜呜呜呜');
+// DbUtil.updateUserInfoById(6, '小明同学6', '36.jpg',1, 178, 28, 98, 4, 25, 188, '签名啊啊啊啊啊六六六六六六');
+// DbUtil.updateUserInfoById(7, '小明同学7', '46.jpg',0, 165, 29, 94, 5, 35, 288, '哎哎哎哎哎啊哎哎哎');
+// DbUtil.updateUserInfoById(8, '小明同学8', '56.jpg',1, 170, 30, 96, 2, 28, 98, '撒付费电视打发发生地方');
+// DbUtil.updateUserInfoById(9, '小红同学9', '22.jpg',0, 172, 36, 97, 8, 55, 100, '山东发生的发生地方撒的发束腹带阿斯顿发');
+// DbUtil.updateUserInfoById(10, '小蓝同学10', '12.jpg',0, 188, 22, 95, 5, 65, 130, '阿斯顿发生的发生的发生的发生的发发');
+// DbUtil.updateUserInfoById(11, '小绿同学11', '32.jpg',1, 180, 18, 99, 6, 20, 120, '三大发生的发生发束腹带当时的发生地方');
 
 //根据userId更新用户经纬度还有geohash
+// DbUtil.updateUserLocationById(3, 113.9223325293, 22.6426228824);
 // DbUtil.updateUserLocationById(4, 113.9323425293, 22.7426228824);
 // DbUtil.updateUserLocationById(5, 113.9749145508, 22.7255238111);
 // DbUtil.updateUserLocationById(6, 113.9615249634, 22.6808661616);
@@ -133,13 +134,13 @@ var DbUtil = require('./dbUtil');
 // DbUtil.clearPayWeChatAndUserListById(3);
 
 //更新用户的技能信息
-DbUtil.updateUserSkillsByUserId(3, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"288\",\"desc\":\"跑步有益健康\"}," +
-    "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"268\",\"desc\":\"健身有益健康\"}," +
-    "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"298\",\"desc\":\"吃饭挺好\"}]");
-DbUtil.updateUserSkillsByUserId(4, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"282\",\"desc\":\"跑步有益健康\"}," +
-    "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"280\",\"desc\":\"健身有益健康\"}," +
-    "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"288\",\"desc\":\"吃饭挺好\"}," +
-    "{\"type\":\"4\",\"name\":\"看电影\",\"price\":\"388\",\"desc\":\"看电影不错阿\"}]");
+// DbUtil.updateUserSkillsByUserId(3, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"288\",\"desc\":\"跑步有益健康\"}," +
+//     "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"268\",\"desc\":\"健身有益健康\"}," +
+//     "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"298\",\"desc\":\"吃饭挺好\"}]");
+// DbUtil.updateUserSkillsByUserId(4, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"282\",\"desc\":\"跑步有益健康\"}," +
+//     "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"280\",\"desc\":\"健身有益健康\"}," +
+//     "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"288\",\"desc\":\"吃饭挺好\"}," +
+//     "{\"type\":\"4\",\"name\":\"看电影\",\"price\":\"388\",\"desc\":\"看电影不错阿\"}]");
 
 //单条数据插入交易记录表
 // for (var i = 0; i < 10000; i++) {

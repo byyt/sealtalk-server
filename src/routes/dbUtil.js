@@ -51,9 +51,10 @@ DbUtil = (function () {
     //如果带了sequelize.transaction(，没法同时执行多条该语句，sequelize.transaction(是为了保证执行的先后顺序？
     //后边的所有语句我几乎都用了sequelize.transaction(
     DbUtil.updateUserInfoById =
-        function (userId, nickname, sex, height, age, feedback_rate, location, followNum, fansNum, qianMing) {
+        function (userId, nickname, portraitUri, sex, height, age, feedback_rate, location, followNum, fansNum, qianMing) {
             return User.update({ //将结果更新到
                 nickname: nickname,
+                portraitUri: portraitUri,
                 sex: sex,
                 height: height,
                 age: age,

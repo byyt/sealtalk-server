@@ -1029,6 +1029,32 @@ router.post('/update_user_location', function (req, res, next) {
     })["catch"](next);
 });
 
+//马上租Ta，付费接口（应该是微信支付成功后再调用这个接口），这个接口调用成功后，再调用马上租Ta，下单接口
+router.post('/mszt_pay', function (req, res, next) {
+    console.log("mszt_pay");
+    var currentUserId = Session.getCurrentUserId(req);
+    return res.send(new APIResult(200));
+});
+
+//马上租Ta，下单接口
+router.post('/mszt_create_order', function (req, res, next) {
+    console.log("mszt_create_order");
+    var currentUserId = Session.getCurrentUserId(req);
+    var timestamp = Date.now();
+    return User.update({ //将结果更新到数据库
+        longitude: req.body.longitude,
+        latitude: req.body.latitude,
+        geohash: geohash,
+        timestamp: timestamp
+    }, {
+        where: {
+            id: currentUserId
+        }
+    }).then(function () {
+        return res.send(new APIResult(200));
+    })["catch"](next);
+});
+
 router.post('/logout', function (req, res) {
     res.clearCookie(Config.AUTH_COOKIE_NAME);
     return res.send(new APIResult(200));

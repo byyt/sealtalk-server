@@ -3,7 +3,7 @@ var Blacklist, Config, DataVersion, Friendship, GROUP_CREATOR, GROUP_MEMBER, Gro
     groupClassMethods,
     groupMemberClassMethods, sequelize, userClassMethods, verificationCodeClassMethods,
     PayImgList, PayImgAndUserList, payImgListClassMethods, payImgAndUserListClassMethods,
-    PayWeChatAndUserList, Order;
+    PayWeChatAndUserList, Order, MsztOrder;
 
 Sequelize = require('sequelize');
 
@@ -901,6 +901,74 @@ Order = sequelize.define('orders', {
     ]
 });
 
+//马上租Ta，对应的订单数据表
+MsztOrder = sequelize.define('mszt_orders', {
+    id: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    payUserId: { //付款方用户id，租方用户id
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false
+    },
+    receiveUserId: { //收款方用户id，被租方用户id
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false
+    },
+    status: {
+        //订单状态，0：未付预付款，1：已付预付款待被租方接受，2：被租方已接受，待租方付全款，3：租方见到被租方，点击确认，4：双方无纠纷后48小时后将钱转给被租方
+        //5：已退钱回给租方（已付预付款，被租方没有接受），6：已退钱回给租方（被租方没有接受，租方未付全款，扣除一定费用后退回给租方）
+        //7：已退钱回给租方（点击确认后，租方和被租方后期发生纠纷，根据情况退钱回给被租方）
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0
+    },
+    yysj: {
+        //预约时间，时间戳，如果到这个时间后，被租房还未确认，则取消本订单，把钱按规则退回给租方，并发个消息推送过去
+        //需要定时器，定时执行任务？要考虑到，如果中间服务器挂掉了，定时任务是需要重启还是怎么样
+        type: Sequelize.BIGINT,
+        allowNull: false,
+        defaultValue: 0
+    },
+    yysc: {//预约时长
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0
+    },
+    longitude: {//预约地点，经度
+        type: Sequelize.DOUBLE,
+        allowNull: false
+    },
+    latitude: {//预约地点，纬度
+        type: Sequelize.DOUBLE,
+        allowNull: false
+    },
+    advancePayment: {//预付款金额
+        type: Sequelize.DOUBLE.UNSIGNED,
+        allowNull: false
+    },
+    totalPayment: {//总付款金额
+        type: Sequelize.DOUBLE.UNSIGNED,
+        allowNull: false
+    },
+    //应该还有交易类型，比如充值，约人付费，查看微信，查看图片，
+    timestamp: {//时间戳
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        comment: '时间戳（版本号）'
+    }
+}, {
+    indexes: [
+        {
+            fields: ['payUserId']
+        }, {
+            fields: ['receiveUserId']
+        }
+    ]
+});
+
 //类的方法不能再像以前那样写了classMethods: verificationCodeClassMethods，而是像下面这样
 VerificationCode.getByToken = function (token) {
     return VerificationCode.findOne({
@@ -926,7 +994,7 @@ VerificationCode.getByPhone = function (region, phone) {
 User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
-    PayWeChatAndUserList, Order];
+    PayWeChatAndUserList, Order, MsztOrder];
 
 
 // //下面时新建表的例子，

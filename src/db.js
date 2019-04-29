@@ -908,6 +908,13 @@ MsztOrder = sequelize.define('mszt_orders', {
         primaryKey: true,
         autoIncrement: true
     },
+    MsztOrderId: {
+        //订单号，用于在客户端显示的订单号，字符串类型（怕20位超过了bigint类型），20位数字，在插入数据的时候，服务端计算生成，
+        //10位的时间戳+10位的租户id（解析出来可能是个位数的），即同一秒内同一个租户不能同时生成2个订单
+        //公式：10位时间戳 + 租户id（位数不够则补充0）（客户端传过来的是字符串，服务端解析成整数类型的id）
+        type: Sequelize.STRING(25),
+        allowNull: false
+    },
     payUserId: { //付款方用户id，租方用户id
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false
@@ -918,8 +925,8 @@ MsztOrder = sequelize.define('mszt_orders', {
     },
     status: {
         //订单状态，0：未付预付款，1：已付预付款待被租方接受，2：被租方已接受，待租方付全款，3：租方见到被租方，点击确认，4：双方无纠纷后48小时后将钱转给被租方
-        //5：已退钱回给租方（已付预付款，被租方没有接受），6：已退钱回给租方（被租方没有接受，租方未付全款，扣除一定费用后退回给租方）
-        //7：已退钱回给租方（点击确认后，租方和被租方后期发生纠纷，根据情况退钱回给被租方）
+        //5：已退钱回给租方（已付预付款，被租方没有接受，全额退款），6：已退钱回给租方（被租方接受了，租方未付全款，扣除一定费用后退回给租方）
+        //7：已退钱回给租方（点击确认后，租方和被租方后期发生纠纷，根据情况退钱回给被租方或被租方）
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false,
         defaultValue: 0
@@ -944,6 +951,10 @@ MsztOrder = sequelize.define('mszt_orders', {
         type: Sequelize.DOUBLE,
         allowNull: false
     },
+    yydd: {//预约地点
+        type: Sequelize.STRING(255),
+        allowNull: true
+    },
     advancePayment: {//预付款金额
         type: Sequelize.DOUBLE.UNSIGNED,
         allowNull: false
@@ -952,16 +963,46 @@ MsztOrder = sequelize.define('mszt_orders', {
         type: Sequelize.DOUBLE.UNSIGNED,
         allowNull: false
     },
-    //应该还有交易类型，比如充值，约人付费，查看微信，查看图片，
-    timestamp: {//时间戳
+    yfkTs: {//付预付款时间，时间戳
         type: Sequelize.BIGINT.UNSIGNED,
-        allowNull: false,
+        allowNull: true,
         defaultValue: 0,
-        comment: '时间戳（版本号）'
-    }
+    },
+    jsTs: {//被租方接受时间，时间戳，待租方付全款
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0,
+    },
+    qrTs: {//租方点击确认时间，时间戳，租方见到被租方
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0,
+    },
+    zzTs: {//转账给被租方时间，双方无纠纷后48小时后将钱转给被租方
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0,
+    },
+    wjstkTs: {//全额退钱回给租方时间，已付预付款，被租方没有接受，全额退款
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0,
+    },
+    wfqktkTs: {//扣除一定费用后退钱回给租方时间,被租方接受了，租方未付全款，扣除一定费用后退回给租方
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0,
+    },
+    jftkTs: {//按规则退钱给租方或被租方时间,点击确认后，租方和被租方后期发生纠纷，根据情况退钱回给被租方或被租方
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0,
+    },
 }, {
     indexes: [
         {
+            fields: ['MsztOrderId']
+        }, {
             fields: ['payUserId']
         }, {
             fields: ['receiveUserId']
@@ -991,7 +1032,7 @@ VerificationCode.getByPhone = function (region, phone) {
 
 //分割线，下面是新建表或者给表新建字段用的
 
-User.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
+MsztOrder.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
     PayWeChatAndUserList, Order, MsztOrder];

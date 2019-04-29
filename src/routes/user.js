@@ -1,5 +1,5 @@
 var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMember, GroupSync, LoginLog, PayImgList,
-    PayImgAndUserList, PayWeChatAndUserList, Order,
+    PayImgAndUserList, PayWeChatAndUserList, Order, MsztOrder,
     MAX_GROUP_MEMBER_COUNT, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH,
     PORTRAIT_URI_MAX_LENGTH, PORTRAIT_URI_MIN_LENGTH, Session, User, Utility, VerificationCode, _, co, express,
     getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator,
@@ -33,7 +33,7 @@ Geohash = require('ngeohash');
 
 ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
     GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
-    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12], Order = ref[13];
+    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12], Order = ref[13], MsztOrder = ref[14];
 
 MAX_GROUP_MEMBER_COUNT = 500;
 
@@ -1036,21 +1036,59 @@ router.post('/mszt_pay', function (req, res, next) {
     return res.send(new APIResult(200));
 });
 
-//马上租Ta，下单接口
+//马上租Ta，付完预付款后，创建订单接口，（现在还未确定是先生成订单id再去支付，还是先支付完再创建订单）
 router.post('/mszt_create_order', function (req, res, next) {
     console.log("mszt_create_order");
+    var getOrderId = function (userId) {
+        // 获取20位字符串类型的订单号，10位时间戳+10位userId
+        var getTenBitId = function (userId) {
+            //获取十位数的id，不够十位用0填充
+            var tenBit = 10000000000;
+            var resultId = "" + userId;
+            for (var i = 1; i < 10; i++) {
+                if (userId < tenBit) {
+                    resultId = resultId + "0"; //把0放到末尾，防止用户通过末尾数字来判断出userId
+                    tenBit = tenBit / 10;
+                } else {
+                    break;
+                }
+            }
+            return resultId;
+        };
+        //单位是秒，时间戳是10位，parseInt强制将double转为int，丢弃小数部分
+        var timestamp = parseInt(Date.now() / 1000);
+        timestamp = timestamp + "";
+        var tenBitId = getTenBitId(userId);
+        return timestamp + tenBitId;
+    };
     var currentUserId = Session.getCurrentUserId(req);
-    var timestamp = Date.now();
-    return User.update({ //将结果更新到数据库
+    var receiveUserId = Utility.decodeIds(req.body.receiveUserId);
+    var msztOrderId = getOrderId(currentUserId);
+    // console.log(msztOrderId);//订单号
+    return MsztOrder.create({ //将结果更新到数据库
+        MsztOrderId: msztOrderId,
+        payUserId: currentUserId,
+        receiveUserId: receiveUserId,
+        status: req.body.status,
+        yysj: req.body.yysj,
+        yysc: req.body.yysc,
         longitude: req.body.longitude,
         latitude: req.body.latitude,
-        geohash: geohash,
-        timestamp: timestamp
+        yydd: req.body.yydd,
+        advancePayment: req.body.advancePayment,
+        totalPayment: req.body.totalPayment,
+        yfkTs: req.body.yfkTs,
+        jsTs: req.body.jsTs,
+        qrTs: req.body.qrTs,
+        zzTs: req.body.zzTs,
+        wjstkTs: req.body.wjstkTs,
+        wfqktkTs: req.body.wfqktkTs,
+        jftkTs: req.body.jftkTs,
     }, {
         where: {
             id: currentUserId
         }
-    }).then(function () {
+    }).then(function (msztOrder) {
         return res.send(new APIResult(200));
     })["catch"](next);
 });

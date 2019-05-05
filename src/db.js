@@ -963,7 +963,11 @@ MsztOrder = sequelize.define('mszt_orders', {
         type: Sequelize.DOUBLE.UNSIGNED,
         allowNull: false
     },
-    yfkTs: {//付预付款时间，时间戳
+    zffs: {//支付方式，0：钱包，1：微信，暂不考虑接入支付宝
+        type: Sequelize.INTEGER,
+        allowNull: false
+    },
+    yfkTs: {//付预付款时间，时间戳，单位为秒
         type: Sequelize.BIGINT.UNSIGNED,
         allowNull: true,
         defaultValue: 0,

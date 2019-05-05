@@ -1062,13 +1062,13 @@ router.post('/mszt_create_order', function (req, res, next) {
         return timestamp + tenBitId;
     };
     var currentUserId = Session.getCurrentUserId(req);
-    var receiveUserId = Utility.decodeIds(req.body.receiveUserId);
+    // var receiveUserId = Utility.decodeIds(req.body.receiveUserId);//不需要这句解密的代码，body.receiveUserId直接给解密了？
     var msztOrderId = getOrderId(currentUserId);
     // console.log(msztOrderId);//订单号
     return MsztOrder.create({ //将结果更新到数据库
         MsztOrderId: msztOrderId,
         payUserId: currentUserId,
-        receiveUserId: receiveUserId,
+        receiveUserId: req.body.receiveUserId,//不需要这句解密的代码，body.receiveUserId直接给解密了？客户端传的receiveUserId是个字符串
         status: req.body.status,
         yysj: req.body.yysj,
         yysc: req.body.yysc,
@@ -1077,6 +1077,7 @@ router.post('/mszt_create_order', function (req, res, next) {
         yydd: req.body.yydd,
         advancePayment: req.body.advancePayment,
         totalPayment: req.body.totalPayment,
+        zffs: req.body.zffs,
         yfkTs: req.body.yfkTs,
         jsTs: req.body.jsTs,
         qrTs: req.body.qrTs,

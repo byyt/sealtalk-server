@@ -915,13 +915,23 @@ MsztOrder = sequelize.define('mszt_orders', {
         type: Sequelize.STRING(25),
         allowNull: false
     },
-    payUserId: { //付款方用户id，租方用户id
+    payUserId: { //付款方用户id，租方用户id，数字，存在数据库的
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false
+    },
+    payUserIdStr: { //付款方用户id，租方用户id，字符串，对数字id加密后的字符串id，返回给客户端的
+        type: Sequelize.STRING,
+        allowNull: false,
+        defaultValue: ''
     },
     receiveUserId: { //收款方用户id，被租方用户id
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false
+    },
+    receiveUserIdStr: { //收款方用户id，被租方用户id，字符串，对数字id加密后的字符串id，返回给客户端的
+        type: Sequelize.STRING,
+        allowNull: false,
+        defaultValue: ''
     },
     status: {
         //订单状态，0：未付预付款，1：已付预付款待被租方接受，2：被租方已接受，待租方付全款，3：租方见到被租方，点击确认，4：双方无纠纷后48小时后将钱转给被租方
@@ -930,6 +940,11 @@ MsztOrder = sequelize.define('mszt_orders', {
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false,
         defaultValue: 0
+    },
+    yyxm: {//预约项目，json字符串
+        type: Sequelize.STRING,
+        allowNull: false,
+        defaultValue: ''
     },
     yysj: {
         //预约时间，时间戳，如果到这个时间后，被租房还未确认，则取消本订单，把钱按规则退回给租方，并发个消息推送过去

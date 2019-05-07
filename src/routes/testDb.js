@@ -146,3 +146,14 @@ var DbUtil = require('./dbUtil');
 // for (var i = 0; i < 10000; i++) {
 //     DbUtil.insertOrder(3,6,300);
 // }
+
+
+var Config = require('../conf');
+
+var N3D = require('../util/n3d');
+
+var Utility = require('../util/util').Utility;
+
+console.log(Utility.stringToNumber("IILdhKyt"));
+console.log(Utility.stringToNumber("VbuzNfA3"));
+

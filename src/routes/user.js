@@ -1062,14 +1062,20 @@ router.post('/mszt_create_order', function (req, res, next) {
         return timestamp + tenBitId;
     };
     var currentUserId = Session.getCurrentUserId(req);
+    var payUserIdStr = Utility.numberToString(currentUserId);//加密，返回给客户端用的
     // var receiveUserId = Utility.decodeIds(req.body.receiveUserId);//不需要这句解密的代码，body.receiveUserId直接给解密了？
+    var receiveUserId = req.body.receiveUserId;//不需要这句解密的代码，body.receiveUserId直接给解密了？客户端传的receiveUserId是个字符串
+    var receiveUserIdStr = Utility.numberToString(receiveUserId);//加密，返回给客户端用的
     var msztOrderId = getOrderId(currentUserId);
     // console.log(msztOrderId);//订单号
     return MsztOrder.create({ //将结果更新到数据库
         MsztOrderId: msztOrderId,
         payUserId: currentUserId,
-        receiveUserId: req.body.receiveUserId,//不需要这句解密的代码，body.receiveUserId直接给解密了？客户端传的receiveUserId是个字符串
+        payUserIdStr: payUserIdStr,
+        receiveUserId: receiveUserId,
+        receiveUserIdStr: receiveUserIdStr,
         status: req.body.status,
+        yyxm: req.body.yyxm,
         yysj: req.body.yysj,
         yysc: req.body.yysc,
         longitude: req.body.longitude,
@@ -1091,6 +1097,37 @@ router.post('/mszt_create_order', function (req, res, next) {
         }
     }).then(function (msztOrder) {
         return res.send(new APIResult(200));
+    })["catch"](next);
+});
+
+//马上租Ta订单查询，查询包括全部（即发起请求的人既可以是租方也可以是被租方），发起请求的人是租方，发起请求的人既可以是被租方
+//发起请求的人是租方对应我的需求，发起请求的人是被租方对应我的服务
+//订单比较重要，所以也用post请求
+router.post('/mszt_get_order', function (req, res, next) {
+    console.log("mszt_get_order");
+
+    var currentUserId = Session.getCurrentUserId(req);
+    var reqType = req.body.reqType;//0表示查询全部，1表示查询我是租方，2表示我是被租方（暂时决定统一返回全部，客户端再做处理）
+
+    MsztOrder.findAll({
+        //记得将支付方的和收钱方进行加密后的uid返回给客户端，不返回原始的数字uid
+        attributes: ['id', 'MsztOrderId', 'payUserIdStr', 'receiveUserIdStr', 'status', 'yyxm', 'yysj', 'yysc', 'longitude', 'latitude',
+            'yydd', 'advancePayment', 'totalPayment', 'zffs'],
+        where: {
+            //查询付款方是当前用户或者收款方是当前用户
+            [Op.or]: [{payUserId: currentUserId}, {receiveUserId: currentUserId}]
+        }
+    }).then(function (msztOrders) {
+
+        var results = Utility.encodeResults(msztOrders);
+
+        results.payUserId = Utility.numberToString(results.payUserId);
+        results.receiveUserId = Utility.numberToString(results.receiveUserId);
+
+        console.log(results);
+
+        return res.send(new APIResult(200, results));
+
     })["catch"](next);
 });
 

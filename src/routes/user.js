@@ -1121,9 +1121,6 @@ router.post('/mszt_get_order', function (req, res, next) {
 
         var results = Utility.encodeResults(msztOrders);
 
-        results.payUserId = Utility.numberToString(results.payUserId);
-        results.receiveUserId = Utility.numberToString(results.receiveUserId);
-
         console.log(results);
 
         return res.send(new APIResult(200, results));

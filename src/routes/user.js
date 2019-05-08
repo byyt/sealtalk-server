@@ -1065,9 +1065,16 @@ router.post('/mszt_create_order', function (req, res, next) {
     var payUserIdStr = Utility.numberToString(currentUserId);//加密，返回给客户端用的
     // var receiveUserId = Utility.decodeIds(req.body.receiveUserId);//不需要这句解密的代码，body.receiveUserId直接给解密了？
     var receiveUserId = req.body.receiveUserId;//不需要这句解密的代码，body.receiveUserId直接给解密了？客户端传的receiveUserId是个字符串
+                                               //感觉有个问题，带Id字样的字段，这边会自动解密，所以订单id传时，参数不能带id，否则会进行解密，出错
     var receiveUserIdStr = Utility.numberToString(receiveUserId);//加密，返回给客户端用的
     var msztOrderId = getOrderId(currentUserId);
     // console.log(msztOrderId);//订单号
+
+    //注意，得加一个限制，付款方uid不能与收款方uid一样，为了方便测试，这里先不加这个限制
+    // if(currentUserId===receiveUserId){
+    //     return res.status(404).send('收款方与付款方不能为同一个人');
+    // }
+
     return MsztOrder.create({ //将结果更新到数据库
         msztOrderId: msztOrderId,
         payUserId: currentUserId,
@@ -1092,6 +1099,9 @@ router.post('/mszt_create_order', function (req, res, next) {
         wfqktkTs: req.body.wfqktkTs,
         jftkTs: req.body.jftkTs,
     }).then(function (msztOrder) {
+        if (!msztOrder) {
+            return res.status(404).send('create order error');
+        }
         var result = Utility.encodeResults(msztOrder);
         console.log(result);
         return res.send(new APIResult(200, result));
@@ -1102,14 +1112,12 @@ router.post('/mszt_create_order', function (req, res, next) {
 router.post('/mszt_get_order_detail', function (req, res, next) {
     console.log("mszt_get_order_detail");
 
-    // {"msztOrderId":"15573176101000000000"}
-
-    console.log(req.body.msztOrderId);
-
+    var msztOrderId = req.body.msztOrderNum;//传订单号的参数名不能为msztOrderId，否则会自动进行解密，比如上一个接口的req.body.receiveUserId
+    // console.log(msztOrderId);
     MsztOrder.findOne({
         where: {
             //根据订单号查询
-            msztOrderId: req.body.msztOrderId
+            msztOrderId: msztOrderId
         },
         //记得将支付方的和收钱方进行加密后的uid返回给客户端，不返回原始的数字uid
         attributes: ['id', 'msztOrderId', 'payUserIdStr', 'receiveUserIdStr', 'status', 'yyxm', 'yysj', 'yysc', 'longitude', 'latitude',

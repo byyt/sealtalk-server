@@ -908,7 +908,7 @@ MsztOrder = sequelize.define('mszt_orders', {
         primaryKey: true,
         autoIncrement: true
     },
-    MsztOrderId: {
+    msztOrderId: {
         //订单号，用于在客户端显示的订单号，字符串类型（怕20位超过了bigint类型），20位数字，在插入数据的时候，服务端计算生成，
         //10位的时间戳+10位的租户id（解析出来可能是个位数的），即同一秒内同一个租户不能同时生成2个订单
         //公式：10位时间戳 + 租户id（位数不够则补充0）（客户端传过来的是字符串，服务端解析成整数类型的id）

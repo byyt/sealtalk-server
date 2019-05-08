@@ -1069,7 +1069,7 @@ router.post('/mszt_create_order', function (req, res, next) {
     var msztOrderId = getOrderId(currentUserId);
     // console.log(msztOrderId);//订单号
     return MsztOrder.create({ //将结果更新到数据库
-        MsztOrderId: msztOrderId,
+        msztOrderId: msztOrderId,
         payUserId: currentUserId,
         payUserIdStr: payUserIdStr,
         receiveUserId: receiveUserId,
@@ -1091,20 +1091,47 @@ router.post('/mszt_create_order', function (req, res, next) {
         wjstkTs: req.body.wjstkTs,
         wfqktkTs: req.body.wfqktkTs,
         jftkTs: req.body.jftkTs,
-    }, {
-        where: {
-            id: currentUserId
-        }
     }).then(function (msztOrder) {
-        return res.send(new APIResult(200));
+        var result = Utility.encodeResults(msztOrder);
+        console.log(result);
+        return res.send(new APIResult(200, result));
+    })["catch"](next);
+});
+
+//马上租Ta订单详情查询，订单比较重要，所以也用post请求
+router.post('/mszt_get_order_detail', function (req, res, next) {
+    console.log("mszt_get_order_detail");
+
+    // {"msztOrderId":"15573176101000000000"}
+
+    console.log(req.body.msztOrderId);
+
+    MsztOrder.findOne({
+        where: {
+            //根据订单号查询
+            msztOrderId: req.body.msztOrderId
+        },
+        //记得将支付方的和收钱方进行加密后的uid返回给客户端，不返回原始的数字uid
+        attributes: ['id', 'msztOrderId', 'payUserIdStr', 'receiveUserIdStr', 'status', 'yyxm', 'yysj', 'yysc', 'longitude', 'latitude',
+            'yydd', 'advancePayment', 'totalPayment', 'zffs']
+    }).then(function (msztOrder) {
+        if (!msztOrder) {
+            return res.status(404).send('Unknown msztOrderId');
+        }
+        var results = Utility.encodeResults(msztOrder);
+
+        console.log(results);
+
+        return res.send(new APIResult(200, results));
+
     })["catch"](next);
 });
 
 //马上租Ta订单查询，查询包括全部（即发起请求的人既可以是租方也可以是被租方），发起请求的人是租方，发起请求的人既可以是被租方
 //发起请求的人是租方对应我的需求，发起请求的人是被租方对应我的服务
 //订单比较重要，所以也用post请求
-router.post('/mszt_get_order', function (req, res, next) {
-    console.log("mszt_get_order");
+router.post('/mszt_get_orders', function (req, res, next) {
+    console.log("mszt_get_orders");
 
     var currentUserId = Session.getCurrentUserId(req);
     var reqType = req.body.reqType;//0表示查询全部，1表示查询我是租方，2表示我是被租方（暂时决定统一返回全部，客户端再做处理）

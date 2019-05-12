@@ -3,7 +3,7 @@ var Blacklist, Config, DataVersion, Friendship, GROUP_CREATOR, GROUP_MEMBER, Gro
     groupClassMethods,
     groupMemberClassMethods, sequelize, userClassMethods, verificationCodeClassMethods,
     PayImgList, PayImgAndUserList, payImgListClassMethods, payImgAndUserListClassMethods,
-    PayWeChatAndUserList, Order, MsztOrder;
+    PayWeChatAndUserList, Order, WdyhOrder;
 
 Sequelize = require('sequelize');
 
@@ -902,18 +902,23 @@ Order = sequelize.define('orders', {
 });
 
 //马上租Ta，对应的订单数据表
-MsztOrder = sequelize.define('mszt_orders', {
+WdyhOrder = sequelize.define('wdyh_orders', {
     id: {
         type: Sequelize.INTEGER.UNSIGNED,
         primaryKey: true,
         autoIncrement: true
     },
-    msztOrderId: {
+    wdyhOrderId: {
         //订单号，用于在客户端显示的订单号，字符串类型（怕20位超过了bigint类型），20位数字，在插入数据的时候，服务端计算生成，
         //10位的时间戳+10位的租户id（解析出来可能是个位数的），即同一秒内同一个租户不能同时生成2个订单
         //公式：10位时间戳 + 租户id（位数不够则补充0）（客户端传过来的是字符串，服务端解析成整数类型的id）
         type: Sequelize.STRING(25),
         allowNull: false
+    },
+    orderType: { //订单类型，0:马上租Ta，1：发布报名
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0
     },
     payUserId: { //付款方用户id，租方用户id，数字，存在数据库的
         type: Sequelize.INTEGER.UNSIGNED,
@@ -1022,7 +1027,7 @@ MsztOrder = sequelize.define('mszt_orders', {
 }, {
     indexes: [
         {
-            fields: ['MsztOrderId']
+            fields: ['WdyhOrderId']
         }, {
             fields: ['payUserId']
         }, {
@@ -1030,6 +1035,25 @@ MsztOrder = sequelize.define('mszt_orders', {
         }
     ]
 });
+
+//一对多关系，有两个外键同时关联User表，
+//参考网址：https://blog.csdn.net/qq_30101131/article/details/79474905
+//参考网址：https://demopark.github.io/sequelize-docs-Zh-CN/associations.html
+//外键，马上租Ta类型的订单，付款方的id，即要知道该订单付款方是谁
+//include时候也要用as对应的名称，https://www.jb51.net/article/106782.htm
+WdyhOrder.belongsTo(User, {
+    as: 'PayUser',//需要建立别名，不然，下面的receiveUserId也关联了User，就会混淆，include时候也要用as对应的名称
+    foreignKey: 'payUserId',
+    constraints: true //建立外键约束？防止用户表User随意删除用户，订单表找不到付款方的用户
+});
+
+//外键，马上租Ta类型的订单，收款方的id，即要知道该订单收款方是谁
+WdyhOrder.belongsTo(User, {
+    as: 'receiveUser',//需要建立别名，不然，上面的payUserId也关联了User，就会混淆，include时候也要用as对应的名称
+    foreignKey: 'receiveUserId',
+    constraints: true //建立外键约束？防止用户表User随意删除用户，订单表找不到收款方的用户
+});
+
 
 //类的方法不能再像以前那样写了classMethods: verificationCodeClassMethods，而是像下面这样
 VerificationCode.getByToken = function (token) {
@@ -1053,10 +1077,10 @@ VerificationCode.getByPhone = function (region, phone) {
 
 //分割线，下面是新建表或者给表新建字段用的
 
-MsztOrder.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
+WdyhOrder.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
-    PayWeChatAndUserList, Order, MsztOrder];
+    PayWeChatAndUserList, Order, WdyhOrder];
 
 
 // //下面时新建表的例子，

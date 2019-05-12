@@ -141,6 +141,10 @@ var DbUtil = require('./dbUtil');
 //     "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"280\",\"desc\":\"健身有益健康\"}," +
 //     "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"288\",\"desc\":\"吃饭挺好\"}," +
 //     "{\"type\":\"4\",\"name\":\"看电影\",\"price\":\"388\",\"desc\":\"看电影不错阿\"}]");
+// DbUtil.updateUserSkillsByUserId(8, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"100\",\"desc\":\"跑步有益健康\"}," +
+//     "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"300\",\"desc\":\"健身有益健康\"}," +
+//     "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"200\",\"desc\":\"吃饭挺好\"}," +
+//     "{\"type\":\"4\",\"name\":\"看电影\",\"price\":\"320\",\"desc\":\"看电影不错阿\"}]");
 
 //单条数据插入交易记录表
 // for (var i = 0; i < 10000; i++) {
@@ -148,12 +152,12 @@ var DbUtil = require('./dbUtil');
 // }
 
 
-var Config = require('../conf');
-
-var N3D = require('../util/n3d');
-
-var Utility = require('../util/util').Utility;
-
-console.log(Utility.stringToNumber("IILdhKyt"));
-console.log(Utility.stringToNumber("VbuzNfA3"));
+// var Config = require('../conf');
+//
+// var N3D = require('../util/n3d');
+//
+// var Utility = require('../util/util').Utility;
+//
+// console.log(Utility.stringToNumber("IILdhKyt"));
+// console.log(Utility.stringToNumber("VbuzNfA3"));
 

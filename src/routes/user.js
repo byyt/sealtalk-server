@@ -1,5 +1,5 @@
 var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMember, GroupSync, LoginLog, PayImgList,
-    PayImgAndUserList, PayWeChatAndUserList, Order, MsztOrder,
+    PayImgAndUserList, PayWeChatAndUserList, Order, WdyhOrder,
     MAX_GROUP_MEMBER_COUNT, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH,
     PORTRAIT_URI_MAX_LENGTH, PORTRAIT_URI_MIN_LENGTH, Session, User, Utility, VerificationCode, _, co, express,
     getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator,
@@ -33,7 +33,7 @@ Geohash = require('ngeohash');
 
 ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
     GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
-    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12], Order = ref[13], MsztOrder = ref[14];
+    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12], Order = ref[13], WdyhOrder = ref[14];
 
 MAX_GROUP_MEMBER_COUNT = 500;
 
@@ -1030,15 +1030,15 @@ router.post('/update_user_location', function (req, res, next) {
 });
 
 //马上租Ta，付费接口（应该是微信支付成功后再调用这个接口），这个接口调用成功后，再调用马上租Ta，下单接口
-router.post('/mszt_pay', function (req, res, next) {
-    console.log("mszt_pay");
+router.post('/wdyh_pay', function (req, res, next) {
+    console.log("wdyh_pay");
     var currentUserId = Session.getCurrentUserId(req);
     return res.send(new APIResult(200));
 });
 
 //马上租Ta，付完预付款后，创建订单接口，（现在还未确定是先生成订单id再去支付，还是先支付完再创建订单）
-router.post('/mszt_create_order', function (req, res, next) {
-    console.log("mszt_create_order");
+router.post('/wdyh_create_order', function (req, res, next) {
+    console.log("wdyh_create_order");
     var getOrderId = function (userId) {
         // 获取20位字符串类型的订单号，10位时间戳+10位userId
         var getTenBitId = function (userId) {
@@ -1067,16 +1067,17 @@ router.post('/mszt_create_order', function (req, res, next) {
     var receiveUserId = req.body.receiveUserId;//不需要这句解密的代码，body.receiveUserId直接给解密了？客户端传的receiveUserId是个字符串
                                                //感觉有个问题，带Id字样的字段，这边会自动解密，所以订单id传时，参数不能带id，否则会进行解密，出错
     var receiveUserIdStr = Utility.numberToString(receiveUserId);//加密，返回给客户端用的
-    var msztOrderId = getOrderId(currentUserId);
-    // console.log(msztOrderId);//订单号
+    var wdyhOrderId = getOrderId(currentUserId);
+    // console.log(wdyhOrderId);//订单号
 
     //注意，得加一个限制，付款方uid不能与收款方uid一样，为了方便测试，这里先不加这个限制
     // if(currentUserId===receiveUserId){
     //     return res.status(404).send('收款方与付款方不能为同一个人');
     // }
 
-    return MsztOrder.create({ //将结果更新到数据库
-        msztOrderId: msztOrderId,
+    return WdyhOrder.create({ //将结果更新到数据库
+        wdyhOrderId: wdyhOrderId,
+        orderType: req.body.orderType,//订单类型，0：马上租Ta，1：发布报名
         payUserId: currentUserId,
         payUserIdStr: payUserIdStr,
         receiveUserId: receiveUserId,
@@ -1098,35 +1099,47 @@ router.post('/mszt_create_order', function (req, res, next) {
         wjstkTs: req.body.wjstkTs,
         wfqktkTs: req.body.wfqktkTs,
         jftkTs: req.body.jftkTs,
-    }).then(function (msztOrder) {
-        if (!msztOrder) {
+    }).then(function (wdyhOrder) {
+        if (!wdyhOrder) {
             return res.status(404).send('create order error');
         }
-        var result = Utility.encodeResults(msztOrder);
+        var result = Utility.encodeResults(wdyhOrder);
         console.log(result);
         return res.send(new APIResult(200, result));
     })["catch"](next);
 });
 
 //马上租Ta订单详情查询，订单比较重要，所以也用post请求
-router.post('/mszt_get_order_detail', function (req, res, next) {
-    console.log("mszt_get_order_detail");
+router.post('/wdyh_get_order_detail', function (req, res, next) {
+    console.log("wdyh_get_order_detail");
 
-    var msztOrderId = req.body.msztOrderNum;//传订单号的参数名不能为msztOrderId，否则会自动进行解密，比如上一个接口的req.body.receiveUserId
-    // console.log(msztOrderId);
-    MsztOrder.findOne({
+    var wdyhOrderId = req.body.wdyhOrderNum;//传订单号的参数名不能为wdyhOrderId，否则会自动进行解密，比如上一个接口的req.body.receiveUserId
+    // console.log(wdyhOrderId);
+    WdyhOrder.findOne({
         where: {
             //根据订单号查询
-            msztOrderId: msztOrderId
+            wdyhOrderId: wdyhOrderId
         },
         //记得将支付方的和收钱方进行加密后的uid返回给客户端，不返回原始的数字uid
-        attributes: ['id', 'msztOrderId', 'payUserIdStr', 'receiveUserIdStr', 'status', 'yyxm', 'yysj', 'yysc', 'longitude', 'latitude',
-            'yydd', 'advancePayment', 'totalPayment', 'zffs']
-    }).then(function (msztOrder) {
-        if (!msztOrder) {
-            return res.status(404).send('Unknown msztOrderId');
+        attributes: ['id', 'wdyhOrderId', 'payUserIdStr', 'receiveUserIdStr', 'status', 'yyxm', 'yysj', 'yysc', 'longitude', 'latitude',
+            'yydd', 'advancePayment', 'totalPayment', 'zffs'],
+        include: [
+            {
+                model: User,
+                as: 'PayUser', //这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                attributes: ['nickname', 'portraitUri', 'sex', 'age']
+            },
+            {
+                model: User,
+                as: 'receiveUser',//这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                attributes: ['nickname', 'portraitUri', 'sex', 'age']
+            }
+        ]
+    }).then(function (wdyhOrder) {
+        if (!wdyhOrder) {
+            return res.status(404).send('Unknown wdyhOrderId');
         }
-        var results = Utility.encodeResults(msztOrder);
+        var results = Utility.encodeResults(wdyhOrder);
 
         console.log(results);
 
@@ -1135,33 +1148,93 @@ router.post('/mszt_get_order_detail', function (req, res, next) {
     })["catch"](next);
 });
 
-//马上租Ta订单查询，查询包括全部（即发起请求的人既可以是租方也可以是被租方），发起请求的人是租方，发起请求的人既可以是被租方
-//发起请求的人是租方对应我的需求，发起请求的人是被租方对应我的服务
+//我的约会--列表
+//马上租Ta和发布报名订单查询，查询包括全部（即发起请求的人既可以是付款方也可以是收款方），发起请求的人是租方，发起请求的人既可以是被租方
+//马上租Ta和发布报名合到一起
 //订单比较重要，所以也用post请求
-router.post('/mszt_get_orders', function (req, res, next) {
-    console.log("mszt_get_orders");
+router.post('/wdyh_get_orders', function (req, res, next) {
+    console.log("wdyh_get_orders");
+
+    var startIndex, pageSize, offset;
+    startIndex = req.body.startIndex;
+    pageSize = req.body.pageSize;
+    startIndex = parseInt(startIndex); //转成整数，否则出错
+    pageSize = parseInt(pageSize);
+    // console.log(startIndex);
+    // console.log(pageSize);
+    offset = startIndex * pageSize;
+    // console.log(offset);
 
     var currentUserId = Session.getCurrentUserId(req);
-    var reqType = req.body.reqType;//0表示查询全部，1表示查询我是租方，2表示我是被租方（暂时决定统一返回全部，客户端再做处理）
 
-    MsztOrder.findAll({
-        //记得将支付方的和收钱方进行加密后的uid返回给客户端，不返回原始的数字uid
-        attributes: ['id', 'MsztOrderId', 'payUserIdStr', 'receiveUserIdStr', 'status', 'yyxm', 'yysj', 'yysc', 'longitude', 'latitude',
-            'yydd', 'advancePayment', 'totalPayment', 'zffs'],
-        where: {
-            //查询付款方是当前用户或者收款方是当前用户
-            [Op.or]: [{payUserId: currentUserId}, {receiveUserId: currentUserId}]
-        }
-    }).then(function (msztOrders) {
+    //可以动态设置筛选条件
+    var shaixuan = {};
+    shaixuan = {
+        [Op.or]: [{payUserId: currentUserId}, {receiveUserId: currentUserId}]
+    };
+    // var xbSelected = req.query.xbSelected;
+    // var fromAge = req.query.fromAge;
+    // var toAge = req.query.toAge;
+    // var fromHeight = req.query.fromHeight;
+    // var toHeight = req.query.toHeight;
+    // // console.log(xbSelected);
+    // // console.log(fromAge);
+    // // console.log(toAge);
+    // // console.log(fromHeight);
+    // // console.log(toHeight);
+    // if (xbSelected !== "" && xbSelected !== null && xbSelected !== undefined) {
+    //     shaixuan.sex = xbSelected;//性别筛选
+    // }
+    // if (fromAge !== "" && fromAge !== null && fromAge !== undefined
+    //     && toAge !== "" && toAge !== null && toAge !== undefined) {
+    //     shaixuan.age = {
+    //         [Op.between]: [fromAge, toAge]//范围筛选
+    //     };
+    // }
+    // if (fromHeight !== "" && fromHeight !== null && fromHeight !== undefined
+    //     && toHeight !== "" && toHeight !== null && toHeight !== undefined) {
+    //     shaixuan.height = {
+    //         [Op.between]: [fromHeight, toHeight]//范围筛选
+    //     };
+    // }
+    // console.log(shaixuan);
 
-        var results = Utility.encodeResults(msztOrders);
+    return WdyhOrder.findAll({
+        offset: offset,
+        limit: pageSize,
+        attributes: ['id', 'wdyhOrderId', 'orderType', 'payUserIdStr', 'receiveUserIdStr', 'status', 'yyxm', 'yysj', 'yysc',
+            'yydd', 'advancePayment', 'totalPayment'],
+        where: shaixuan,
+        include: [
+            {
+                model: User,
+                as: 'PayUser', //这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                attributes: ['nickname', 'portraitUri', 'sex', 'age']
+            },
+            {
+                model: User,
+                as: 'receiveUser',//这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                attributes: ['nickname', 'portraitUri', 'sex', 'age']
+            }
+        ]
+    }).then(function (wdyhOrders) {
+
+        var results = {};
+        var wdyhOrderJsonArray = Utility.encodeResults(wdyhOrders);
+
+        results.data = wdyhOrderJsonArray;
+        results.nextIndex = startIndex + 1;
 
         console.log(results);
 
         return res.send(new APIResult(200, results));
 
-    })["catch"](next);
+
+    })["catch"](next);//后面这个["catch"](next);不要忘记加
+
+
 });
+
 
 router.post('/logout', function (req, res) {
     res.clearCookie(Config.AUTH_COOKIE_NAME);

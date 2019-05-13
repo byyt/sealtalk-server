@@ -999,7 +999,22 @@ WdyhOrder = sequelize.define('wdyh_orders', {
         allowNull: true,
         defaultValue: 0,
     },
+    fqkTs: {//租方付全款时间，时间戳，待租方确认
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0,
+    },
     qrTs: {//租方点击确认时间，时间戳，租方见到被租方
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0,
+    },
+    pjTs: {//租方评价时间，时间戳
+        type: Sequelize.BIGINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 0,
+    },
+    wcTs: {//订单时间，时间戳
         type: Sequelize.BIGINT.UNSIGNED,
         allowNull: true,
         defaultValue: 0,

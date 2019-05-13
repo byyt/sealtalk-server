@@ -1067,6 +1067,12 @@ router.post('/wdyh_create_order', function (req, res, next) {
     var receiveUserId = req.body.receiveUserId;//不需要这句解密的代码，body.receiveUserId直接给解密了？客户端传的receiveUserId是个字符串
                                                //感觉有个问题，带Id字样的字段，这边会自动解密，所以订单id传时，参数不能带id，否则会进行解密，出错
     var receiveUserIdStr = Utility.numberToString(receiveUserId);//加密，返回给客户端用的
+
+    //付款方和收款方不能是同一个人
+    if (currentUserId === receiveUserId) {
+        return res.status(404).send('create order error');
+    }
+
     var wdyhOrderId = getOrderId(currentUserId);
     // console.log(wdyhOrderId);//订单号
 
@@ -1232,6 +1238,26 @@ router.post('/wdyh_get_orders', function (req, res, next) {
 
     })["catch"](next);//后面这个["catch"](next);不要忘记加
 
+
+});
+
+//马上租Ta订单更新，订单比较重要，所以也用post请求
+router.post('/wdyh_update_order_status', function (req, res, next) {
+    console.log("wdyh_update_order_status");
+
+    var wdyhOrderId = req.body.wdyhOrderNum;//传订单号的参数名不能为wdyhOrderId，否则会自动进行解密，比如上一个接口的req.body.receiveUserId
+    // console.log(wdyhOrderId);
+
+    return WdyhOrder.update({ //将结果更新到数据库
+        status: req.body.status,
+        jsTs: req.body.jsTs
+    }, {
+        where: {
+            wdyhOrderId: wdyhOrderId
+        }
+    }).then(function () {
+        return res.send(new APIResult(200));
+    })["catch"](next);
 
 });
 

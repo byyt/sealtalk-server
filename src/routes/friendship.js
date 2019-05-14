@@ -4,7 +4,7 @@ express = require('express');
 
 moment = require('moment');
 
-rongCloud = require('rongcloud-sdk');
+// rongCloud = require('rongcloud-sdk');
 
 Config = require('../conf');
 
@@ -40,7 +40,11 @@ CONTACT_OPERATION_ACCEPT_RESPONSE = 'AcceptResponse';
 
 CONTACT_OPERATION_REQUEST = 'Request';
 
-rongCloud.init(Config.RONGCLOUD_APP_KEY, Config.RONGCLOUD_APP_SECRET);
+// rongCloud.init(Config.RONGCLOUD_APP_KEY, Config.RONGCLOUD_APP_SECRET);
+rongCloud = require('rongcloud-sdk')({
+    appkey: Config.RONGCLOUD_APP_KEY,
+    secret: Config.RONGCLOUD_APP_SECRET
+});//融云sdk
 
 sendContactNotification = function(userId, nickname, friendId, operation, message, timestamp) {
   var contactNotificationMessage, encodedFriendId, encodedUserId;

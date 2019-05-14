@@ -26,7 +26,11 @@ ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], F
 
 FRIENDSHIP_AGREED = 20;
 
-rongCloud.init(Config.RONGCLOUD_APP_KEY, Config.RONGCLOUD_APP_SECRET);
+// rongCloud.init(Config.RONGCLOUD_APP_KEY, Config.RONGCLOUD_APP_SECRET);
+rongCloud = require('rongcloud-sdk')({
+    appkey: Config.RONGCLOUD_APP_KEY,
+    secret: Config.RONGCLOUD_APP_SECRET
+});//融云sdk
 
 router = express.Router();
 

@@ -58,7 +58,11 @@ GROUP_OPERATION_BULLETIN = 'Bulletin';
 
 GROUP_OPERATION_TRANSFER = 'Transfer';
 
-rongCloud.init(Config.RONGCLOUD_APP_KEY, Config.RONGCLOUD_APP_SECRET);
+// rongCloud.init(Config.RONGCLOUD_APP_KEY, Config.RONGCLOUD_APP_SECRET);
+rongCloud = require('rongcloud-sdk')({
+    appkey: Config.RONGCLOUD_APP_KEY,
+    secret: Config.RONGCLOUD_APP_SECRET
+});//融云sdk
 
 sendGroupNotification = function(userId, groupId, operation, data) {
   var encodedGroupId, encodedUserId, groupNotificationMessage;

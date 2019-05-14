@@ -3,7 +3,7 @@ var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMe
     MAX_GROUP_MEMBER_COUNT, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH,
     PORTRAIT_URI_MAX_LENGTH, PORTRAIT_URI_MIN_LENGTH, Session, User, Utility, VerificationCode, _, co, express,
     getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator,
-    DbUtil, Geohash;
+    DbUtil, Geohash, RongSDK, Message, System;
 
 express = require('express');
 
@@ -12,8 +12,6 @@ co = require('co');
 _ = require('underscore');
 
 moment = require('moment');
-
-rongCloud = require('rongcloud-sdk');
 
 qiniu = require('qiniu');
 
@@ -29,7 +27,8 @@ APIResult = require('../util/util').APIResult;
 
 DbUtil = require('./dbUtil');
 
-Geohash = require('ngeohash');
+Geohash = require('ngeohash');//附近的人用到的技术
+
 
 ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
     GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
@@ -49,7 +48,14 @@ PASSWORD_MIN_LENGTH = 6;
 
 PASSWORD_MAX_LENGTH = 20;
 
-rongCloud.init(Config.RONGCLOUD_APP_KEY, Config.RONGCLOUD_APP_SECRET);
+// rongCloud.init(Config.RONGCLOUD_APP_KEY, Config.RONGCLOUD_APP_SECRET);
+rongCloud = require('rongcloud-sdk')({
+    appkey: Config.RONGCLOUD_APP_KEY,
+    secret: Config.RONGCLOUD_APP_SECRET
+});//融云sdk
+
+Message = rongCloud.Message;
+System = Message.System;
 
 router = express.Router();
 
@@ -1110,8 +1116,92 @@ router.post('/wdyh_create_order', function (req, res, next) {
             return res.status(404).send('create order error');
         }
         var result = Utility.encodeResults(wdyhOrder);
-        console.log(result);
-        return res.send(new APIResult(200, result));
+        // console.log(result);
+
+        //发个推送消息个对方
+        WdyhOrder.findOne({
+            where: {
+                //根据订单号查询
+                wdyhOrderId: wdyhOrderId
+            },
+            //记得将支付方的和收钱方进行加密后的uid返回给客户端，不返回原始的数字uid
+            attributes: ['payUserIdStr', 'receiveUserIdStr'],
+            include: [
+                {
+                    model: User,
+                    as: 'PayUser', //这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                    attributes: ['nickname']
+                },
+                {
+                    model: User,
+                    as: 'ReceiveUser',//这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                    attributes: ['nickname']
+                }
+            ]
+        }).then(function (wdyhOrder) {
+            if (!wdyhOrder) {
+                return res.status(404).send('Unknown wdyhOrderId');
+            }
+            var results = Utility.encodeResults(wdyhOrder);
+
+            console.log("tui song1");
+            console.log(results);
+
+            var targetId, content;
+            if (req.body.status === 1) {
+
+                targetId = results.receiveUserIdStr;
+                content = results.PayUser.nickname + "已付了预付款，请您接受";
+
+            } else if (req.body.status === 2) {
+
+                targetId = results.payUserIdStr;
+                content = results.ReceiveUser.nickname + "已同意，请您付全款";
+
+            } else if (req.body.status === 3) {
+
+                targetId = results.receiveUserIdStr;
+                content = results.PayUser.nickname + "已付全款";
+
+            } else if (req.body.status === 4) {
+
+                targetId = results.receiveUserIdStr;
+                content = results.PayUser.nickname + "已确认";
+
+            } else if (req.body.status === 5) {
+
+                targetId = results.receiveUserIdStr;
+                content = results.PayUser.nickname + "已评价";
+
+            } else {
+                targetId = results.receiveUserIdStr;
+                content = "订单已完成";
+            }
+
+            console.log("tui song2");
+            console.log(targetId);
+            console.log(content);
+
+            var message = {
+                senderId: '约会秘书',
+                targetId: targetId,
+                objectName: 'RC:TxtMsg',
+                content: {
+                    content: content
+                }
+            };
+            System.send(message).then(sendResult => {
+                console.log(sendResult);
+            }, error => {
+                console.log(error);
+            });
+
+            return res.send(new APIResult(200, result));
+
+        })["catch"](next);
+
+
+
     })["catch"](next);
 });
 
@@ -1137,7 +1227,7 @@ router.post('/wdyh_get_order_detail', function (req, res, next) {
             },
             {
                 model: User,
-                as: 'receiveUser',//这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                as: 'ReceiveUser',//这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
                 attributes: ['nickname', 'portraitUri', 'sex', 'age']
             }
         ]
@@ -1219,7 +1309,7 @@ router.post('/wdyh_get_orders', function (req, res, next) {
             },
             {
                 model: User,
-                as: 'receiveUser',//这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                as: 'ReceiveUser',//这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
                 attributes: ['nickname', 'portraitUri', 'sex', 'age']
             }
         ]
@@ -1247,16 +1337,103 @@ router.post('/wdyh_update_order_status', function (req, res, next) {
 
     var wdyhOrderId = req.body.wdyhOrderNum;//传订单号的参数名不能为wdyhOrderId，否则会自动进行解密，比如上一个接口的req.body.receiveUserId
     // console.log(wdyhOrderId);
+    var status = req.body.status;
+    var jsTs = req.body.jsTs;
 
     return WdyhOrder.update({ //将结果更新到数据库
-        status: req.body.status,
-        jsTs: req.body.jsTs
+        status: status,
+        jsTs: jsTs
     }, {
         where: {
             wdyhOrderId: wdyhOrderId
         }
     }).then(function () {
-        return res.send(new APIResult(200));
+
+        //发个推送消息个对方
+        WdyhOrder.findOne({
+            where: {
+                //根据订单号查询
+                wdyhOrderId: wdyhOrderId
+            },
+            //记得将支付方的和收钱方进行加密后的uid返回给客户端，不返回原始的数字uid
+            attributes: ['payUserIdStr', 'receiveUserIdStr'],
+            include: [
+                {
+                    model: User,
+                    as: 'PayUser', //这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                    attributes: ['nickname']
+                },
+                {
+                    model: User,
+                    as: 'ReceiveUser',//这里用了别名，实际是User，去看wdyhOrder.belongsTo(User, 时，用了as别名，参考网址也有
+                    attributes: ['nickname']
+                }
+            ]
+        }).then(function (wdyhOrder) {
+            if (!wdyhOrder) {
+                return res.status(404).send('Unknown wdyhOrderId');
+            }
+            var results = Utility.encodeResults(wdyhOrder);
+
+            console.log("tui song1");
+            console.log(results);
+
+            var targetId, content;
+            if (req.body.status === 1) {
+
+                targetId = results.receiveUserIdStr;
+                content = results.PayUser.nickname + "已付了预付款，请您接受";
+
+            } else if (req.body.status === 2) {
+
+                targetId = results.payUserIdStr;
+                content = results.ReceiveUser.nickname + "已同意，请您付全款";
+
+            } else if (req.body.status === 3) {
+
+                targetId = results.receiveUserIdStr;
+                content = results.PayUser.nickname + "已付全款";
+
+            } else if (req.body.status === 4) {
+
+                targetId = results.receiveUserIdStr;
+                content = results.PayUser.nickname + "已确认";
+
+            } else if (req.body.status === 5) {
+
+                targetId = results.receiveUserIdStr;
+                content = results.PayUser.nickname + "已评价";
+
+            } else {
+                targetId = results.receiveUserIdStr;
+                content = "订单已完成";
+            }
+
+            console.log("tui song2");
+            console.log(targetId);
+            console.log(content);
+
+            var message = {
+                senderId: '约会秘书',
+                targetId: targetId,
+                objectName: 'RC:TxtMsg',
+                content: {
+                    content: content
+                }
+            };
+            System.send(message).then(sendResult => {
+                console.log(sendResult);
+            }, error => {
+                console.log(error);
+            });
+
+
+            //上面的查询对方用户，并且发送推送消息的操作与下面是异步的，即可能上面还没发送，下面已经先回包给客户端
+            return res.send(new APIResult(200));
+
+        })["catch"](next);
+
+
     })["catch"](next);
 
 });

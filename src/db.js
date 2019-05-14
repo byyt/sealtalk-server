@@ -1064,7 +1064,7 @@ WdyhOrder.belongsTo(User, {
 
 //外键，马上租Ta类型的订单，收款方的id，即要知道该订单收款方是谁
 WdyhOrder.belongsTo(User, {
-    as: 'receiveUser',//需要建立别名，不然，上面的payUserId也关联了User，就会混淆，include时候也要用as对应的名称
+    as: 'ReceiveUser',//需要建立别名，不然，上面的payUserId也关联了User，就会混淆，include时候也要用as对应的名称
     foreignKey: 'receiveUserId',
     constraints: true //建立外键约束？防止用户表User随意删除用户，订单表找不到收款方的用户
 });

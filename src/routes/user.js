@@ -3,7 +3,7 @@ var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMe
     MAX_GROUP_MEMBER_COUNT, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH,
     PORTRAIT_URI_MAX_LENGTH, PORTRAIT_URI_MIN_LENGTH, Session, User, Utility, VerificationCode, _, co, express,
     getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator,
-    DbUtil, Geohash, RongSDK, Message, System;
+    DbUtil, Geohash, Message, System;
 
 express = require('express');
 
@@ -1201,7 +1201,6 @@ router.post('/wdyh_create_order', function (req, res, next) {
         })["catch"](next);
 
 
-
     })["catch"](next);
 });
 
@@ -1378,7 +1377,7 @@ router.post('/wdyh_update_order_status', function (req, res, next) {
             console.log("tui song1");
             console.log(results);
 
-            var targetId, content;
+            var targetId, content, extra;
             if (req.body.status === 1) {
 
                 targetId = results.receiveUserIdStr;
@@ -1407,18 +1406,23 @@ router.post('/wdyh_update_order_status', function (req, res, next) {
             } else {
                 targetId = results.receiveUserIdStr;
                 content = "订单已完成";
+
             }
+
+            extra = wdyhOrderId + "";
 
             console.log("tui song2");
             console.log(targetId);
             console.log(content);
+            console.log(extra);
 
             var message = {
                 senderId: '约会秘书',
                 targetId: targetId,
                 objectName: 'RC:TxtMsg',
                 content: {
-                    content: content
+                    content: content,
+                    extra: extra
                 }
             };
             System.send(message).then(sendResult => {

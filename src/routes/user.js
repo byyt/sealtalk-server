@@ -72,12 +72,14 @@ regionMap = {
 
 getToken = function (userId, nickname, portraitUri) {
     return new Promise(function (resolve, reject) {
-        return rongCloud.user.getToken(Utility.encodeId(userId), nickname, portraitUri, function (err, resultText) {
-            var result;
-            if (err) {
-                return reject(err);
-            }
-            result = JSON.parse(resultText);
+        var user = {
+            id: Utility.encodeId(userId),
+            name: nickname,
+            portrait: portraitUri
+        };
+
+        rongCloud.User.register(user).then(result => {
+            console.log(result);
             if (result.code !== 200) {
                 return reject(new Error('RongCloud Server API Error Code: ' + result.code));
             }
@@ -92,7 +94,11 @@ getToken = function (userId, nickname, portraitUri) {
             })["catch"](function (error) {
                 return reject(error);
             });
+        }, error => {
+            console.log(error);
+            return reject(error);
         });
+
     });
 };
 
@@ -1694,10 +1700,13 @@ router.post('/upload_contacts', function (req, res, next) {
 });
 
 router.get('/get_token', function (req, res, next) {
-    return User.findById(Session.getCurrentUserId(req, {
+    console.log('get_token');
+    return User.findByPk(Session.getCurrentUserId(req, {
         attributes: ['id', 'nickname', 'portraitUri']
     })).then(function (user) {
         return getToken(user.id, user.nickname, user.portraitUri).then(function (token) {
+            console.log(user.id);
+            console.log(token);
             return res.send(new APIResult(200, Utility.encodeResults({
                 userId: user.id,
                 token: token

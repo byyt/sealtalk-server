@@ -1153,7 +1153,7 @@ router.post('/wdyh_create_order', function (req, res, next) {
             console.log("tui song1");
             console.log(results);
 
-            var targetId, content;
+            var targetId, content, extra;
             if (req.body.status === 1) {
 
                 targetId = results.receiveUserIdStr;
@@ -1184,16 +1184,20 @@ router.post('/wdyh_create_order', function (req, res, next) {
                 content = "订单已完成";
             }
 
+            extra = wdyhOrderId + "";
+
             console.log("tui song2");
             console.log(targetId);
             console.log(content);
+            console.log(extra);
 
             var message = {
                 senderId: '约会秘书',
                 targetId: targetId,
-                objectName: 'RC:TxtMsg',
+                objectName: 'RCD:YhmsMsg',
                 content: {
-                    content: content
+                    content: content,
+                    extra: extra
                 }
             };
             System.send(message).then(sendResult => {
@@ -1425,7 +1429,7 @@ router.post('/wdyh_update_order_status', function (req, res, next) {
             var message = {
                 senderId: '约会秘书',
                 targetId: targetId,
-                objectName: 'RC:TxtMsg',
+                objectName: 'RCD:YhmsMsg',
                 content: {
                     content: content,
                     extra: extra

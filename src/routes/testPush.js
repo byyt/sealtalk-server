@@ -48,7 +48,7 @@ var System = Message.System;
 var message = {
     senderId: '约会秘书55',
     targetId: 'IILdhKyt',
-    objectName: 'RC:TxtMsg',
+    objectName: 'RCD:YhmsMsg',
     content: {
         content: "有新的消息79"
     }
@@ -62,7 +62,7 @@ System.send(message).then(sendResult => {
 var message2 = {
     senderId: '约会秘书嗷嗷',
     targetId: 'x1AZQRTs',
-    objectName: 'RC:TxtMsg',
+    objectName: 'RCD:YhmsMsg',
     content: {
         content: "有新的消息，还会"
     }

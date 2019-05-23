@@ -1150,61 +1150,40 @@ router.post('/wdyh_create_order', function (req, res, next) {
             }
             var results = Utility.encodeResults(wdyhOrder);
 
-            console.log("tui song1");
             console.log(results);
 
-            var targetId, content, extra;
             if (req.body.status === 1) {
 
+                var targetId, content, extra;
                 targetId = results.receiveUserIdStr;
                 content = results.PayUser.nickname + "已付了预付款，请您接受";
-
-            } else if (req.body.status === 2) {
-
-                targetId = results.payUserIdStr;
-                content = results.ReceiveUser.nickname + "已同意，请您付全款";
-
-            } else if (req.body.status === 3) {
-
-                targetId = results.receiveUserIdStr;
-                content = results.PayUser.nickname + "已付全款";
-
-            } else if (req.body.status === 4) {
-
-                targetId = results.receiveUserIdStr;
-                content = results.PayUser.nickname + "已确认";
-
-            } else if (req.body.status === 5) {
-
-                targetId = results.receiveUserIdStr;
-                content = results.PayUser.nickname + "已评价";
-
-            } else {
-                targetId = results.receiveUserIdStr;
-                content = "订单已完成";
-            }
-
-            extra = wdyhOrderId + "";
-
-            console.log("tui song2");
-            console.log(targetId);
-            console.log(content);
-            console.log(extra);
-
-            var message = {
-                senderId: '约会秘书',
-                targetId: targetId,
-                objectName: 'RCD:YhmsMsg',
-                content: {
-                    content: content,
-                    extra: extra
+                //传回一个json字符串，其中type字段是必传的，后边的字段根据情况来弄
+                extra = {
+                    type: 'wdyh',
+                    wdyhOrderId: wdyhOrderId
                 }
-            };
-            System.send(message).then(sendResult => {
-                console.log(sendResult);
-            }, error => {
-                console.log(error);
-            });
+                //json转为json字符串
+                extra = JSON.stringify(extra);
+
+                // console.log(targetId);
+                // console.log(content);
+                // console.log(extra);
+
+                var message = {
+                    senderId: '约会秘书',
+                    targetId: targetId,
+                    objectName: 'RCD:YhmsMsg',
+                    content: {
+                        content: content,
+                        extra: extra
+                    }
+                };
+                System.send(message).then(sendResult => {
+                    console.log(sendResult);
+                }, error => {
+                    console.log(error);
+                });
+            }
 
             return res.send(new APIResult(200, result));
 
@@ -1419,12 +1398,17 @@ router.post('/wdyh_update_order_status', function (req, res, next) {
 
             }
 
-            extra = wdyhOrderId + "";
+            //传回一个json字符串，其中type字段是必传的，后边的字段根据情况来弄
+            extra = {
+                type: 'wdyh',
+                wdyhOrderId: wdyhOrderId
+            }
+            //json转为json字符串
+            extra = JSON.stringify(extra);
 
-            console.log("tui song2");
-            console.log(targetId);
-            console.log(content);
-            console.log(extra);
+            // console.log(targetId);
+            // console.log(content);
+            // console.log(extra);
 
             var message = {
                 senderId: '约会秘书',
@@ -1435,6 +1419,7 @@ router.post('/wdyh_update_order_status', function (req, res, next) {
                     extra: extra
                 }
             };
+
             System.send(message).then(sendResult => {
                 console.log(sendResult);
             }, error => {

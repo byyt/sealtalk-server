@@ -1,5 +1,5 @@
 var APIResult, Blacklist, Cache, Config, DataVersion, Friendship, Group, GroupMember, GroupSync, LoginLog, PayImgList,
-    PayImgAndUserList, PayWeChatAndUserList, Order, WdyhOrder,
+    PayImgAndUserList, PayWeChatAndUserList, Order, WdyhOrder, BalanceCoins,
     MAX_GROUP_MEMBER_COUNT, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH,
     PORTRAIT_URI_MAX_LENGTH, PORTRAIT_URI_MIN_LENGTH, Session, User, Utility, VerificationCode, _, co, express,
     getToken, moment, qiniu, ref, regionMap, rongCloud, router, sequelize, validator,
@@ -32,7 +32,8 @@ Geohash = require('ngeohash');//附近的人用到的技术
 
 ref = require('../db'), sequelize = ref[0], User = ref[1], Blacklist = ref[2], Friendship = ref[3], Group = ref[4],
     GroupMember = ref[5], GroupSync = ref[6], DataVersion = ref[7], VerificationCode = ref[8], LoginLog = ref[9],
-    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12], Order = ref[13], WdyhOrder = ref[14];
+    PayImgList = ref[10], PayImgAndUserList = ref[11], PayWeChatAndUserList = ref[12], Order = ref[13], WdyhOrder = ref[14],
+    BalanceCoins = ref[15];
 
 MAX_GROUP_MEMBER_COUNT = 500;
 
@@ -249,6 +250,7 @@ router.post('/register_code', function (req, res, next) {
             if (result) {
                 salt = Utility.random(1000, 9999);
                 hash = Utility.hash(password, salt);
+                //开启事务，这里，我加上了我自己添加的BalanceCoins余额金币表
                 return sequelize.transaction(function (t) {
                     return User.create({
                         nickname: nickname,
@@ -260,15 +262,21 @@ router.post('/register_code', function (req, res, next) {
                     }, {
                         transaction: t
                     }).then(function (user) {
-                        return DataVersion.create({
-                            userId: user.id,
+                        return BalanceCoins.create({//自己加的，创建BalanceCoins余额金币表
+                            userId: user.id
+                        }, {
                             transaction: t
                         }).then(function () {
-                            Session.setAuthCookie(res, user.id);
-                            Session.setNicknameToCache(user.id, nickname);
-                            return res.send(new APIResult(200, Utility.encodeResults({
-                                id: user.id
-                            })));
+                            return DataVersion.create({
+                                userId: user.id,
+                                transaction: t
+                            }).then(function () {
+                                Session.setAuthCookie(res, user.id);
+                                Session.setNicknameToCache(user.id, nickname);
+                                return res.send(new APIResult(200, Utility.encodeResults({
+                                    id: user.id
+                                })));
+                            });
                         });
                     });
                 });
@@ -813,7 +821,7 @@ router.get('/get_user_detail_one', function (req, res, next) {
     //下面是先不用缓存的，以便修改数据库数据时能及时返回给客户端，上线时加上缓存
     return User.findByPk(userId, {
         attributes: ['id', 'nickname', 'sex', 'portraitUri', 'height', 'birthday', 'age', 'longitude', 'latitude', 'suoZaiDi',
-            'feedback_rate', 'followNum', 'fansNum', 'qianMing', 'xqah', 'freeImgList', 'skills']
+            'feedback_rate', 'followNum', 'fansNum', 'qianMing', 'xqah', 'freeImgList', 'skills', 'identity']
     }).then(function (user) {
         if (!user) {
             return res.status(404).send('Unknown target user.');
@@ -1437,6 +1445,227 @@ router.post('/wdyh_update_order_status', function (req, res, next) {
 
 });
 
+//余额和金币获取
+router.post('/balance_coins_get', function (req, res, next) {
+    console.log("balance_coins_get");
+    var currentUserId = Session.getCurrentUserId(req);
+    var type = req.body.type;
+    var balance = req.body.balance;
+    var coins = req.body.coins;
+
+    return BalanceCoins.findOne({
+        where: {
+            userId: currentUserId
+        },
+        attributes: ['balance', 'coins']
+    }).then(function (user) {
+        if (!user) {
+            return res.status(404).send('Unknown ordinary user.');
+        }
+        var results = Utility.encodeResults(user);
+        return res.send(new APIResult(200, results));
+    })["catch"](next);
+
+
+});
+
+//支付接口，这个接口是面对交易只发生在发起用户自己的情况，比如充值等
+router.post('/balance_coins_operation_single', function (req, res, next) {
+
+    console.log("balance_coins_operation");
+
+    var currentUserId = Session.getCurrentUserId(req);
+    //0：啥都不作，100：加余额，200：减余额，300：加金币，400：减金币
+    //上面只是为了当前测试用的，简单的，后边还会有具体类型，比如充值101，发消息付费201
+    var type = req.body.type;
+    var balance = req.body.balance;
+    var coins = req.body.coins;
+
+    return BalanceCoins.findOne({
+        where: {
+            userId: currentUserId
+        },
+        attributes: ['balance', 'coins']
+    }).then(function (user) {
+        if (!user) {
+            return res.status(404).send('Unknown ordinary user.');
+        }
+        var userResults = Utility.encodeResults(user);
+        var dbBalance = user.balance;
+        var dbCoins = user.coins;
+        // console.log(userResults);
+
+        var updateAttrs = {};
+        if (type === 100 || type === 101) {
+            dbBalance = dbBalance + balance;
+        } else if (type === 200 || type === 201) {
+            if (dbBalance - balance < 0) {
+                var results = {
+                    balance: dbBalance,
+                    coins: dbCoins
+                };
+                return res.send(new APIResult(555, results));//555错误码是指余额不足
+            }
+            dbBalance = dbBalance - balance;
+        } else if (type === 333) {
+            dbCoins = dbCoins + coins;
+        } else if (type === 444) {
+            if (dbCoins - coins < 0) {
+                return res.send(new APIResult(556));//556错误码是指金币不足
+            }
+            dbCoins = dbCoins - coins;
+        } else {
+            //其他type值，返回错误
+            return res.status(404).send('Unknown type.');
+        }
+
+        return BalanceCoins.update({
+            balance: dbBalance,
+            coins: dbCoins
+        }, {
+            where: {
+                id: currentUserId
+            }
+        }).then(function () {
+            var results = {
+                balance: dbBalance,
+                coins: dbCoins
+            };
+            return res.send(new APIResult(200, results));
+        })["catch"](next);
+
+    })["catch"](next);
+});
+
+//支付接口，这个接口是面对交易发生在两个人的情况，比如发消息，看微信等，付款方扣费，收款方收费
+//这个接口会调用比较频繁，比如每发一条消息就会进行一次扣费请求，视频每分钟也会进行一次扣费请求
+router.post('/balance_coins_operation_multi', function (req, res, next) {
+
+    console.log("balance_coins_operation_multi");
+
+    var currentUserId = Session.getCurrentUserId(req);
+    //type的值，每个对应的意思，到时从客户端拷贝过来，一一对照
+    //上面只是为了当前测试用的，简单的，后边还会有具体类型，比如充值101，发消息付费201
+    var type = req.body.type;
+    var myBalance = req.body.myBalance;
+    var myCoins = req.body.myCoins;
+    var otherUserId = req.body.otherUserId;
+    var otherBalance = req.body.otherBalance;
+    var otherCoins = req.body.otherCoins;
+
+    return BalanceCoins.findOne({
+        where: {
+            userId: currentUserId
+        },
+        attributes: ['balance', 'coins']
+    }).then(function (ordinaryUser) {
+        if (!ordinaryUser) {
+            return res.status(404).send('Unknown ordinary user.');
+        }
+
+        return BalanceCoins.findOne({
+            where: {
+                userId: otherUserId
+            },
+            attributes: ['balance', 'coins']
+        }).then(function (otherUser) {
+            if (!otherUser) {
+                return res.status(404).send('Unknown other user.');
+            }
+
+            var ordinaryUserResults = Utility.encodeResults(ordinaryUser);
+            var ordinaryDbBalance = ordinaryUser.balance;
+            var ordinaryDbCoins = ordinaryUser.coins;
+            // console.log(ordinaryUserResults);
+
+            var otherUserResults = Utility.encodeResults(ordinaryUser);
+            var otherDbBalance = otherUser.balance;
+            var otherDbCoins = otherUser.coins;
+            // console.log(otherUserResults);
+
+
+            var ordinaryUpdateAttrs = {};
+            if (type === 100 || type === 101) {
+
+            } else if (type === 201) {
+                if (ordinaryDbBalance - myBalance < 0) {
+                    var results = {
+                        balance: ordinaryDbBalance,
+                        coins: ordinaryDbCoins
+                    };
+                    return res.send(new APIResult(555, results));//555错误码是指余额不足
+                }
+                ordinaryDbBalance = ordinaryDbBalance - myBalance;
+                otherDbBalance = otherDbBalance + otherBalance;
+            } else if (type === 333) {
+
+            } else if (type === 444) {
+
+            } else {
+                //其他type值，返回错误
+                return res.status(404).send('Unknown type');
+            }
+
+            //官方文档，事务：https://demopark.github.io/sequelize-docs-Zh-CN/transactions.html
+            //其他文档，https://blog.csdn.net/soonfly/article/details/70305585
+            //其他文档，https://blog.csdn.net/l1394049664/article/details/81814090
+            //官方文档说sequelize默认使用最高级别的隔离，第二个网址说这种隔离会影响并发性能，所以改成第二种
+            //注意（事务transaction 须和where同级），参考网址:https://blog.csdn.net/weixin_37778679/article/details/82692584
+
+            return sequelize.transaction({
+                //考虑现在并发量以及安全角度选择了第二中隔离
+                isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
+            }, function (t) {
+                //执行领个更新操作，所以加上事务，保证两个操作能够同时执行成功
+                //减掉付款方的钱
+                return BalanceCoins.update({
+                    balance: ordinaryDbBalance,
+                    coins: ordinaryDbCoins
+                }, {
+                    where: {
+                        id: currentUserId
+                    },
+                    //注意（事务transaction 须和where同级）second parameter is "options", so transaction must be in it
+                    //一开始在这里吃了大亏，不知道要放在where同级，官方文档也没有where结合使用的例子
+                    //参考网址:https://blog.csdn.net/weixin_37778679/article/details/82692584
+                    transaction: t
+                }).then(function () {
+                    //给收款方加上钱
+                    return BalanceCoins.update({
+                        balance: otherDbBalance,
+                        coins: otherDbCoins
+                    }, {
+                        where: {
+                            id: otherUserId
+                        },
+                        //注意（事务transaction 须和where同级）second parameter is "options", so transaction must be in it
+                        transaction: t
+                    });
+                });
+
+            }).then(function (result) {
+                // 事务已被提交
+                // result 是 promise 链返回到事务回调的结果
+                //注意，看官方文档，我上面这样传递transaction: t，以及sequelize.transaction().then(function (t) {
+                // 应该属于非托管事务（then-callback）,所以下面需要手动调用t.commit();和t.rollback();
+                console.log("commmit");
+                var results = {
+                    balance: ordinaryDbBalance,
+                    coins: ordinaryDbCoins
+                };
+                return res.send(new APIResult(200, results));
+            }).catch(function (err) {
+                // 事务已被回滚
+                // err 是拒绝 promise 链返回到事务回调的错误
+                //付费失败，客户端该如何处理，后边一定要考虑这种情况，根据500来判断
+                console.log("rollback");
+                var results = {};
+                return res.send(new APIResult(500, results));
+            })["catch"](next);
+
+        })["catch"](next);
+    })["catch"](next);
+});
 
 router.post('/logout', function (req, res) {
     res.clearCookie(Config.AUTH_COOKIE_NAME);

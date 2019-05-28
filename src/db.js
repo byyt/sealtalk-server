@@ -3,7 +3,7 @@ var Blacklist, Config, DataVersion, Friendship, GROUP_CREATOR, GROUP_MEMBER, Gro
     groupClassMethods,
     groupMemberClassMethods, sequelize, userClassMethods, verificationCodeClassMethods,
     PayImgList, PayImgAndUserList, payImgListClassMethods, payImgAndUserListClassMethods,
-    PayWeChatAndUserList, Order, WdyhOrder;
+    PayWeChatAndUserList, Order, WdyhOrder, BalanceCoins;
 
 Sequelize = require('sequelize');
 
@@ -359,6 +359,11 @@ User = sequelize.define('users', {
     skills: {//Ta的技能，json字符串
         type: Sequelize.TEXT,
         allowNull: true
+    },
+    identity: {//身份信息，0：普通用户，1：达人用户，
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0
     },
     passwordHash: {
         type: Sequelize.CHAR(40),
@@ -1069,6 +1074,42 @@ WdyhOrder.belongsTo(User, {
     constraints: true //建立外键约束？防止用户表User随意删除用户，订单表找不到收款方的用户
 });
 
+//用户的余额和金币表，把余额和金币单独从User表中抽出来，因为余额和金币有可能会经常进行更新操作
+//为了提高并发能力把这两个字段抽出来，User表只保留了不经常变化的字段，然后可以使用缓存
+//BalanceCoins的插入必须放在注册中，与User表的插入同步，即两个表数据个数必须一致，使用事务插入
+BalanceCoins = sequelize.define('balance_coins', {
+    id: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    userId: {//用户id
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: false
+    },
+    balance: {//余额
+        type: Sequelize.DOUBLE,
+        allowNull: false,
+        defaultValue: 0
+    },
+    coins: {//金币
+        type: Sequelize.BIGINT,
+        allowNull: false,
+        defaultValue: 0
+    },
+}, {
+    indexes: [
+        {
+            fields: ['userId']
+        }
+    ]
+});
+
+//外键，马上租Ta类型的订单，收款方的id，即要知道该订单收款方是谁
+BalanceCoins.belongsTo(User, {
+    foreignKey: 'userId',
+    constraints: true //建立外键约束？防止用户表User随意删除用户，订单表找不到收款方的用户
+});
 
 //类的方法不能再像以前那样写了classMethods: verificationCodeClassMethods，而是像下面这样
 VerificationCode.getByToken = function (token) {
@@ -1090,12 +1131,23 @@ VerificationCode.getByPhone = function (region, phone) {
     });
 };
 
+User.checkPhoneAvailable = function (region, phone) {
+    return User.count({
+        where: {
+            region: region,
+            phone: phone
+        }
+    }).then(function (count) {
+        return count === 0;
+    });
+}
+
 //分割线，下面是新建表或者给表新建字段用的
 
-WdyhOrder.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
+Order.sync({alter: true}); //每加一个表时，把这句话放开，单独运行db.js就可以新增表
 
 module.exports = [sequelize, User, Blacklist, Friendship, Group, GroupMember, GroupSync, DataVersion, VerificationCode, LoginLog, PayImgList, PayImgAndUserList,
-    PayWeChatAndUserList, Order, WdyhOrder];
+    PayWeChatAndUserList, Order, WdyhOrder, BalanceCoins];
 
 
 // //下面时新建表的例子，

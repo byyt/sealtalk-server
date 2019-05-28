@@ -35,6 +35,7 @@ router = express.Router();
 
 validator = sequelize.Validator;
 
+const Sequelize = require('sequelize');
 
 DbUtil = (function () {
     function DbUtil() {
@@ -476,17 +477,62 @@ DbUtil = (function () {
     };
 
     //插入单条订单数据，对应操作：xx用户对xx用户付费
-    DbUtil.insertOrder = function (payUserId, receiveUserId, amount) {
-        //把时间戳也记录进去
-        var timestamp = Date.now();
-        return Order.create({
-            payUserId: payUserId,
-            receiveUserId: receiveUserId,
-            amount: amount,
-            timestamp: timestamp
-        }).then(function (OrderList) {
+    DbUtil.insertOrder = function (payUserId, receiveUserId, amount, index) {
+
+        console.log("DbUtil.insertOrder");
+        console.log(index);
+        return sequelize.transaction({
+            //考虑现在并发量以及安全角度选择了第二中隔离
+            isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
+        }, function (t) {
+
+            //把时间戳也记录进去
+            var timestamp = Date.now();
+            return Order.create({
+                payUserId: payUserId,
+                receiveUserId: receiveUserId,
+                amount: amount,
+                timestamp: timestamp
+            }, {
+                //注意（事务transaction 须和where同级）second parameter is "options", so transaction must be in it
+                transaction: t
+            }).then(function () {
+                //给收款方加上钱
+
+                var a = 11;
+                var b = 11;
+                var c;
+                if (index % 2 === 1) {
+                    c = index;
+                } else {
+                    c = adfasdf;
+                }
+
+                return Order.update({
+                    payUserId: a,
+                    receiveUserId: b,
+                }, {
+                    where: {
+                        id: c
+                    },
+                    //注意（事务transaction 须和where同级）second parameter is "options", so transaction must be in it
+                    transaction: t
+                });
+            });
+
+        }).then(function (result) {
+
+            console.log("commit");
+            console.log(index);
+
+        }).catch(function (err) {
+
+            console.log("rollback");
+            console.log(index);
 
         });
+
+
     };
 
     return DbUtil;

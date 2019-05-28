@@ -41,7 +41,9 @@ var DbUtil = require('./dbUtil');
 
 //根据userId更新用户资料
 //userId, nickname, portraitUri, sex, height, age, feedback_rate, location, followNum, fansNum, qianMing
-// DbUtil.updateUserInfoById(3, '小明同学3', '6.jpg',1, 175, 28, 98, 2, 50, 198, '签名啊啊啊啊啊三三三三三三');
+// DbUtil.updateUserInfoById(1, '小明同学1', '2.jpg',1, 172, 22, 98, 2, 50, 198, '签名啊啊啊啊啊一一一');
+// DbUtil.updateUserInfoById(2, '小明同学2', '6.jpg',1, 174, 26, 98, 2, 50, 198, '签名啊啊啊啊啊二二二');
+// DbUtil.updateUserInfoById(3, '小明同学3', '8.jpg',1, 175, 28, 98, 2, 50, 198, '签名啊啊啊啊啊三三三三三三');
 // DbUtil.updateUserInfoById(4, '小明同学4', '16.jpg',0, 172, 26, 95, 4, 35, 138, '签名啊啊啊啊啊四四四四四四');
 // DbUtil.updateUserInfoById(5, '小明同学5', '26.jpg',1, 173, 27, 96, 6, 15, 128, '签名啊啊啊啊啊呜呜呜呜呜呜');
 // DbUtil.updateUserInfoById(6, '小明同学6', '36.jpg',1, 178, 28, 98, 4, 25, 188, '签名啊啊啊啊啊六六六六六六');
@@ -52,6 +54,8 @@ var DbUtil = require('./dbUtil');
 // DbUtil.updateUserInfoById(11, '小绿同学11', '32.jpg',1, 180, 18, 99, 6, 20, 120, '三大发生的发生发束腹带当时的发生地方');
 
 //根据userId更新用户经纬度还有geohash
+// DbUtil.updateUserLocationById(1, 113.9123325293, 22.6526228824);
+// DbUtil.updateUserLocationById(2, 113.8823325293, 22.5426228824);
 // DbUtil.updateUserLocationById(3, 113.9223325293, 22.6426228824);
 // DbUtil.updateUserLocationById(4, 113.9323425293, 22.7426228824);
 // DbUtil.updateUserLocationById(5, 113.9749145508, 22.7255238111);
@@ -72,6 +76,8 @@ var DbUtil = require('./dbUtil');
 
 //批量插入免费图片表
 //其实不是进行多次插入单个图片，而是先把多个图片存为一个字符串数组，然后对用户进行性一次插入
+// DbUtil.batchInsertFreeImgUrlById(1, 26, 33);
+// DbUtil.batchInsertFreeImgUrlById(2, 44, 52);
 // DbUtil.batchInsertFreeImgUrlById(3, 20, 28);
 // DbUtil.batchInsertFreeImgUrlById(4, 29, 34);
 // DbUtil.batchInsertFreeImgUrlById(5, 35, 40);
@@ -134,6 +140,12 @@ var DbUtil = require('./dbUtil');
 // DbUtil.clearPayWeChatAndUserListById(3);
 
 //更新用户的技能信息
+// DbUtil.updateUserSkillsByUserId(1, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"280\",\"desc\":\"跑步有益健康\"}," +
+//     "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"260\",\"desc\":\"健身有益健康\"}," +
+//     "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"290\",\"desc\":\"吃饭挺好\"}]");
+// DbUtil.updateUserSkillsByUserId(2, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"280\",\"desc\":\"跑步有益健康\"}," +
+//     "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"200\",\"desc\":\"健身有益健康\"}," +
+//     "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"298\",\"desc\":\"吃饭挺好\"}]");
 // DbUtil.updateUserSkillsByUserId(3, "[{\"type\":\"1\",\"name\":\"跑步\",\"price\":\"288\",\"desc\":\"跑步有益健康\"}," +
 //     "{\"type\":\"2\",\"name\":\"健身\",\"price\":\"268\",\"desc\":\"健身有益健康\"}," +
 //     "{\"type\":\"3\",\"name\":\"吃饭\",\"price\":\"298\",\"desc\":\"吃饭挺好\"}]");
@@ -147,9 +159,9 @@ var DbUtil = require('./dbUtil');
 //     "{\"type\":\"4\",\"name\":\"看电影\",\"price\":\"320\",\"desc\":\"看电影不错阿\"}]");
 
 //单条数据插入交易记录表
-// for (var i = 0; i < 10000; i++) {
-//     DbUtil.insertOrder(3,6,300);
-// }
+for (var i = 0; i < 100; i++) {
+    DbUtil.insertOrder(3, 6, 300, i);
+}
 
 
 // var Config = require('../conf');
